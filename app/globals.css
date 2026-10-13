@@ -49,34 +49,34 @@
 }
 
 :root {
-  --background: oklch(0.97 0.012 160);
-  --foreground: oklch(0.22 0.025 253);
+  --background: #f3f7fb;
+  --foreground: #192c42;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.23 0.025 253);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.23 0.025 253);
-  --primary: oklch(0.58 0.14 158);
-  --primary-foreground: oklch(0.99 0.01 160);
-  --secondary: oklch(0.95 0.012 250);
-  --secondary-foreground: oklch(0.31 0.03 253);
-  --muted: oklch(0.955 0.008 250);
-  --muted-foreground: oklch(0.53 0.025 253);
-  --accent: oklch(0.94 0.03 158);
-  --accent-foreground: oklch(0.36 0.08 158);
+  --primary: #075fa3;
+  --primary-foreground: #ffffff;
+  --secondary: #fff0e8;
+  --secondary-foreground: #9c3b0c;
+  --muted: #edf2f7;
+  --muted-foreground: #64748b;
+  --accent: #e7f1f9;
+  --accent-foreground: #07518d;
   --destructive: oklch(0.58 0.22 28);
-  --border: oklch(0.9 0.015 160);
-  --input: oklch(0.9 0.015 160);
-  --ring: oklch(0.67 0.12 158);
-  --chart-1: oklch(0.58 0.14 158);
-  --chart-2: oklch(0.65 0.12 215);
-  --chart-3: oklch(0.73 0.14 85);
-  --chart-4: oklch(0.65 0.16 30);
-  --chart-5: oklch(0.58 0.12 285);
+  --border: #dce5ee;
+  --input: #dce5ee;
+  --ring: #3985bc;
+  --chart-1: #075fa3;
+  --chart-2: #fe661d;
+  --chart-3: #3d91c9;
+  --chart-4: #e79a31;
+  --chart-5: #6878a5;
   --radius: 0.625rem;
   --sidebar: oklch(0.2 0.026 253);
   --sidebar-foreground: oklch(0.94 0.01 250);
-  --sidebar-primary: oklch(0.73 0.14 158);
-  --sidebar-primary-foreground: oklch(0.19 0.025 253);
+  --sidebar-primary: #fe661d;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: oklch(0.27 0.035 253);
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(1 0 0 / 9%);
@@ -84,33 +84,33 @@
 }
 
 .dark {
-  --background: oklch(0.15 0.02 253);
-  --foreground: oklch(0.94 0.01 250);
-  --card: oklch(0.195 0.024 253);
-  --card-foreground: oklch(0.94 0.01 250);
-  --popover: oklch(0.195 0.024 253);
-  --popover-foreground: oklch(0.94 0.01 250);
-  --primary: oklch(0.73 0.14 158);
-  --primary-foreground: oklch(0.19 0.025 253);
-  --secondary: oklch(0.25 0.025 253);
-  --secondary-foreground: oklch(0.93 0.01 250);
-  --muted: oklch(0.25 0.025 253);
-  --muted-foreground: oklch(0.7 0.02 250);
-  --accent: oklch(0.28 0.05 158);
-  --accent-foreground: oklch(0.86 0.09 158);
+  --background: #0d1928;
+  --foreground: #e8f0f7;
+  --card: #152438;
+  --card-foreground: #e8f0f7;
+  --popover: #152438;
+  --popover-foreground: #e8f0f7;
+  --primary: #64b2eb;
+  --primary-foreground: #10263a;
+  --secondary: #422719;
+  --secondary-foreground: #ffc19e;
+  --muted: #1b2b3e;
+  --muted-foreground: #9aabbd;
+  --accent: #1b3851;
+  --accent-foreground: #c4e4fa;
   --destructive: oklch(0.67 0.19 25);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.69 0.12 158);
-  --chart-1: oklch(0.73 0.14 158);
-  --chart-2: oklch(0.7 0.12 215);
-  --chart-3: oklch(0.78 0.14 85);
-  --chart-4: oklch(0.69 0.16 30);
-  --chart-5: oklch(0.66 0.12 285);
-  --sidebar: oklch(0.18 0.025 253);
+  --border: #293b50;
+  --input: #34465a;
+  --ring: #64b2eb;
+  --chart-1: #64b2eb;
+  --chart-2: #ff8b50;
+  --chart-3: #73c1ec;
+  --chart-4: #f2b75c;
+  --chart-5: #9aa8d4;
+  --sidebar: #101e30;
   --sidebar-foreground: oklch(0.94 0.01 250);
-  --sidebar-primary: oklch(0.73 0.14 158);
-  --sidebar-primary-foreground: oklch(0.19 0.025 253);
+  --sidebar-primary: #fe782f;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: oklch(0.26 0.03 253);
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
@@ -130,10 +130,17 @@
 }
 
 @layer components {
+  .crm-sidebar {
+    background-color: var(--sidebar);
+    background-image:
+      radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--sidebar-primary) 10%, transparent), transparent 17rem),
+      linear-gradient(155deg, color-mix(in srgb, var(--sidebar) 90%, white), var(--sidebar) 48%, color-mix(in srgb, var(--sidebar) 92%, black));
+  }
+
   .crm-main {
     background-image:
-      radial-gradient(ellipse at 88% 0%, oklch(0.92 0.035 158 / 45%), transparent 34rem),
-      linear-gradient(180deg, oklch(0.985 0.008 160), var(--background) 38rem);
+      radial-gradient(ellipse at 88% 0%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 34rem),
+      linear-gradient(180deg, color-mix(in srgb, var(--primary) 2%, var(--background)), var(--background) 38rem);
   }
 
   main [data-slot="card"] {
@@ -148,7 +155,7 @@
   }
 
   .hero-grid {
-    background-image: linear-gradient(oklch(1 0 0 / 4%) 1px, transparent 1px), linear-gradient(90deg, oklch(1 0 0 / 4%) 1px, transparent 1px);
+    background-image: linear-gradient(rgb(255 255 255 / 4%) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 4%) 1px, transparent 1px);
     background-size: 42px 42px;
     mask-image: linear-gradient(90deg, transparent, black);
   }

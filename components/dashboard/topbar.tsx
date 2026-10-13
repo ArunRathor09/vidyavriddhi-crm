@@ -76,11 +76,8 @@ export function Topbar() {
 
       <div className="ml-auto flex items-center gap-1">
         <span className="mr-1 hidden items-center gap-2 rounded-full border border-border/70 bg-card/70 px-3 py-1.5 text-[10px] font-medium text-muted-foreground xl:inline-flex">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-          </span>
-          All systems normal
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          Vidyavriddhi CRM
         </span>
         <ThemeToggle />
         <DropdownMenu>
@@ -103,14 +100,14 @@ export function Topbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2 px-2">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">NX</AvatarFallback>
+                <AvatarFallback className="bg-secondary text-xs font-semibold text-secondary-foreground">VV</AvatarFallback>
               </Avatar>
               <span className="hidden text-xs font-medium md:inline">Workspace</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuLabel>
-              <p className="text-xs font-semibold">Nexora workspace</p>
+              <p className="text-xs font-semibold">Vidyavriddhi workspace</p>
               <p className="mt-1 text-[11px] font-normal text-muted-foreground">{pathname.split("/").filter(Boolean).at(-1)?.replaceAll("-", " ") ?? "Admissions CRM"}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

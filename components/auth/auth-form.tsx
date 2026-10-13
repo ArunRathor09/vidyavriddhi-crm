@@ -2,8 +2,9 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, GraduationCap, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ArrowRight, LoaderCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,7 +70,7 @@ export function AuthForm() {
           </div>
           <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900 dark:bg-amber-950/30">
             <p className="font-semibold text-amber-900 dark:text-amber-200">Supabase is not configured yet.</p>
-            <p className="mt-1 text-xs leading-relaxed text-amber-800 dark:text-amber-200/80">Add your project URL and anon key to <code className="rounded bg-amber-100 px-1 font-mono dark:bg-amber-900/50">.env.local</code>, then restart Next.js. You can still explore the sample CRM in local demo mode.</p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-800 dark:text-amber-200/80">Add your project URL and publishable key to <code className="rounded bg-amber-100 px-1 font-mono dark:bg-amber-900/50">.env.local</code>, then restart Next.js. You can still explore the sample CRM in local demo mode.</p>
           </div>
           <Button className="mt-5 w-full" asChild>
             <Link href="/dashboard">Continue in demo mode<ArrowRight className="ml-2 h-4 w-4" /></Link>
@@ -142,7 +143,7 @@ export function AuthForm() {
           )}
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            {isSignUp ? "Already have an account?" : "New to Nexora?"}{" "}
+            {isSignUp ? "Already have an account?" : "New to Vidyavriddhi?"}{" "}
             <button type="button" className="font-semibold text-primary hover:underline" onClick={() => { setConfirmationSent(false); setIsSignUp((current) => !current); }}>
               {isSignUp ? "Sign in" : "Create a workspace account"}
             </button>
@@ -156,12 +157,15 @@ export function AuthForm() {
 
 function Brand({ inverted = false }: { inverted?: boolean }) {
   return (
-    <Link href="/dashboard" className={`relative z-10 inline-flex w-fit items-center gap-3 ${inverted ? "text-sidebar-foreground" : "text-foreground"}`}>
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground"><GraduationCap className="h-5 w-5" /></span>
-      <span className="leading-tight">
-        <span className="block text-sm font-bold tracking-wide">NEXORA</span>
-        <span className="mt-0.5 block text-[10px] font-medium tracking-[0.17em] text-muted-foreground">EDUCATION CRM</span>
-      </span>
+    <Link href="/dashboard" aria-label="Vidyavriddhi CRM home" className={`relative z-10 inline-flex w-fit items-center rounded-xl bg-white p-2 shadow-sm ${inverted ? "ring-1 ring-white/10" : "ring-1 ring-border"}`}>
+      <Image
+        src="/vidyavriddhi-logo.png"
+        alt="Vidyavriddhi — a unit of JP Technologies"
+        width={500}
+        height={200}
+        priority
+        className="h-auto w-[210px] object-contain sm:w-[230px]"
+      />
     </Link>
   );
 }

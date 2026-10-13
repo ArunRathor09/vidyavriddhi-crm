@@ -63,7 +63,7 @@ export function SettingsWorkspace() {
               <ol className="mt-3 list-decimal space-y-2 pl-5 text-xs leading-relaxed text-amber-900/80 dark:text-amber-100/80">
                 <li>Create a project at <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-2">supabase.com/dashboard <ArrowUpRight className="inline h-3 w-3" /></a>.</li>
                 <li>Run <code className="rounded bg-amber-100 px-1 py-0.5 font-mono dark:bg-amber-900/50">supabase/schema.sql</code> in the project&apos;s SQL Editor.</li>
-                <li>Copy the Project URL and anon/publishable key into <code className="rounded bg-amber-100 px-1 py-0.5 font-mono dark:bg-amber-900/50">.env.local</code> as <code className="font-mono">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.</li>
+                <li>Copy the Project URL and publishable key into <code className="rounded bg-amber-100 px-1 py-0.5 font-mono dark:bg-amber-900/50">.env.local</code> as <code className="font-mono">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="font-mono">NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>.</li>
                 <li>Restart the Next.js server, then create your workspace account.</li>
               </ol>
               <p className="mt-3 text-[11px] font-medium text-amber-800 dark:text-amber-200">Never put a Supabase service-role key in a NEXT_PUBLIC_ variable or browser code.</p>

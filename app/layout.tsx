@@ -9,8 +9,8 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: {
-    default: "Nexora Education CRM",
-    template: "%s | Nexora CRM",
+    default: "Vidyavriddhi Admissions CRM",
+    template: "%s | Vidyavriddhi CRM",
   },
   description:
     "Manage student enquiries, counselling, admissions, documents, and fee collections in one workspace.",

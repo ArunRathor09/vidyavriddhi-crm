@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -84,32 +85,32 @@ export function DashboardHome() {
 
   return (
     <div className="mx-auto max-w-[1480px] space-y-6 md:space-y-7">
-      <section className="relative isolate overflow-hidden rounded-[26px] bg-[#111d24] px-5 py-6 text-white shadow-[0_24px_60px_-34px_oklch(0.18_0.025_253_/_55%)] sm:px-8 sm:py-8 xl:px-10">
+      <section className="relative isolate overflow-hidden rounded-[26px] bg-[#10263a] px-5 py-6 text-white shadow-[0_24px_60px_-34px_oklch(0.18_0.025_253_/_55%)] sm:px-8 sm:py-8 xl:px-10">
         <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-y-0 right-0 w-[62%] opacity-60" />
-        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-36 h-[390px] w-[390px] rounded-full border border-emerald-300/10" />
-        <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-24 h-[270px] w-[270px] rounded-full border border-emerald-300/10" />
-        <div aria-hidden="true" className="pointer-events-none absolute right-[12%] top-1/2 h-64 w-64 -translate-y-1/2 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-36 h-[390px] w-[390px] rounded-full border border-[#fe661d]/15" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-24 h-[270px] w-[270px] rounded-full border border-[#075fa3]/30" />
+        <div aria-hidden="true" className="pointer-events-none absolute right-[12%] top-1/2 h-64 w-64 -translate-y-1/2 rounded-full bg-[#075fa3]/25 blur-3xl" />
         <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_310px] lg:items-center xl:grid-cols-[minmax(0,1fr)_350px]">
           <div className="max-w-3xl">
             <div className="mb-5 flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/[0.09] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-200">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#fe661d]/30 bg-[#fe661d]/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-[#ffb18c]">
                 <Sparkles className="h-3 w-3" />
                 Admissions intelligence
               </span>
               {isDemo ? (
                 <Badge variant="outline" className="h-6 border-amber-200/20 bg-amber-300/10 px-2.5 text-[9px] font-semibold tracking-[0.1em] text-amber-200">DEMO DATA</Badge>
               ) : !loading && errors.length === 0 ? (
-                <Badge variant="outline" className="h-6 border-emerald-200/20 bg-emerald-300/10 px-2.5 text-[9px] font-semibold tracking-[0.1em] text-emerald-200">LIVE WORKSPACE</Badge>
+                <Badge variant="outline" className="h-6 border-sky-200/20 bg-sky-300/10 px-2.5 text-[9px] font-semibold tracking-[0.1em] text-sky-100">LIVE WORKSPACE</Badge>
               ) : null}
             </div>
             <h1 className="max-w-2xl text-[clamp(2.25rem,5vw,4rem)] font-semibold leading-[1.04] tracking-[-0.055em]">
-              Every student&apos;s next chapter<span className="text-emerald-300">,</span> starts here.
+              Every student&apos;s next chapter<span className="text-[#fe661d]">,</span> starts here.
             </h1>
             <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300/75 sm:text-[15px]">
               Your global admissions desk, in focus. Move every enquiry forward with clarity, context and care.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-2.5">
-              <Button asChild className="h-10 rounded-xl bg-emerald-300 px-4 text-xs font-bold text-[#10211e] shadow-[0_8px_22px_-12px_oklch(0.8_0.14_158_/_90%)] hover:bg-emerald-200">
+              <Button asChild className="h-10 rounded-xl bg-[#fe661d] px-4 text-xs font-bold text-white shadow-[0_8px_22px_-12px_rgb(254_102_29_/_90%)] hover:bg-[#eb5712]">
                 <Link href="/leads"><Plus className="mr-2 h-4 w-4" />Create new enquiry</Link>
               </Button>
               <Button variant="outline" onClick={exportDashboard} disabled={loading || leads.records.length === 0} className="h-10 rounded-xl border-white/15 bg-white/[0.04] px-4 text-xs font-medium text-white hover:bg-white/10 hover:text-white">
@@ -119,19 +120,32 @@ export function DashboardHome() {
             </div>
           </div>
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] p-4 backdrop-blur-sm sm:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="rounded-lg bg-white px-1.5 py-0.5">
+                <Image
+                  src="/vidyavriddhi-logo.png"
+                  alt="Vidyavriddhi — a unit of JP Technologies"
+                  width={500}
+                  height={200}
+                  priority
+                  className="h-[48px] w-[120px] object-contain"
+                />
+              </div>
+              <span className="text-right text-[8px] font-semibold uppercase leading-relaxed tracking-[0.16em] text-slate-300/55">Student-first<br />admissions</span>
+            </div>
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-300/55">Daily pulse</p>
                 <p className="mt-1 text-sm font-semibold text-white">Your workspace at a glance</p>
               </div>
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-300/10 text-emerald-200"><TrendingUp className="h-4 w-4" /></span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#fe661d]/15 text-[#ff9b68]"><TrendingUp className="h-4 w-4" /></span>
             </div>
             <div className="space-y-1">
               <PulseRow label="Hot prospects" value={loading ? "—" : leads.records.filter((lead) => lead.priority === "Hot").length} detail="Need personal attention" />
               <PulseRow label="Follow-ups due" value={loading ? "—" : todayFollowUps.length} detail="Keep the conversation moving" />
               <PulseRow label="Applications moving" value={loading ? "—" : activeApplications.length} detail="Across your admissions pipeline" />
             </div>
-            <Link href="/follow-ups" className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-[10px] font-semibold text-emerald-200 transition-colors hover:text-emerald-100">
+            <Link href="/follow-ups" className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-[10px] font-semibold text-[#ffab80] transition-colors hover:text-white">
               Open today&apos;s priorities <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -152,9 +166,9 @@ export function DashboardHome() {
       )}
 
       <section aria-label="Key metrics" className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Total leads" value={loading ? "—" : leads.records.length} note={`${leads.records.filter((lead) => lead.priority === "Hot").length} hot-priority`} icon={Target} accent="green" />
+        <MetricCard label="Total leads" value={loading ? "—" : leads.records.length} note={`${leads.records.filter((lead) => lead.priority === "Hot").length} hot-priority`} icon={Target} accent="blue" />
         <MetricCard label="Active students" value={loading ? "—" : students.records.length} note="Profiles in your workspace" icon={GraduationCap} accent="blue" />
-        <MetricCard label="Applications in progress" value={loading ? "—" : activeApplications.length} note="Across all admission stages" icon={FileText} accent="amber" />
+        <MetricCard label="Applications in progress" value={loading ? "—" : activeApplications.length} note="Across all admission stages" icon={FileText} accent="orange" />
         <MetricCard label="Fees collected" value={loading ? "—" : formatINR(paidTotal)} note={`${payments.records.filter((payment) => payment.status === "Paid").length} payments received`} icon={CircleDollarSign} accent="violet" />
       </section>
 
@@ -172,7 +186,7 @@ export function DashboardHome() {
               <div key={stage.name} className="grid grid-cols-[112px_1fr_28px] items-center gap-3">
                 <span className={`truncate text-[11px] ${index >= 6 ? "font-semibold text-primary" : "text-muted-foreground"}`}>{stage.name}</span>
                 <div className="h-[7px] overflow-hidden rounded-full bg-muted/90">
-                  <div className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all" style={{ width: `${Math.max(stage.count ? 7 : 0, (stage.count / pipelineMax) * 100)}%`, opacity: 1 - index * 0.055 }} />
+                  <div className="h-full rounded-full bg-gradient-to-r from-[#075fa3] to-[#4b9bd1] transition-all" style={{ width: `${Math.max(stage.count ? 7 : 0, (stage.count / pipelineMax) * 100)}%`, opacity: 1 - index * 0.055 }} />
                 </div>
                 <span className="text-right text-[11px] font-semibold tabular-nums">{loading ? "—" : stage.count}</span>
               </div>
@@ -284,12 +298,12 @@ function MetricCard({
   value: string | number;
   note: string;
   icon: typeof Target;
-  accent: "green" | "blue" | "amber" | "violet";
+  accent: "blue" | "sky" | "orange" | "violet";
 }) {
   const accents = {
-    green: { icon: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300", bar: "bg-emerald-500" },
-    blue: { icon: "bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300", bar: "bg-sky-500" },
-    amber: { icon: "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300", bar: "bg-amber-500" },
+    blue: { icon: "bg-blue-50 text-[#075fa3] dark:bg-blue-950/60 dark:text-blue-300", bar: "bg-[#075fa3]" },
+    sky: { icon: "bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300", bar: "bg-sky-500" },
+    orange: { icon: "bg-orange-50 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300", bar: "bg-[#fe661d]" },
     violet: { icon: "bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300", bar: "bg-violet-500" },
   };
   return (
@@ -314,7 +328,7 @@ function PulseRow({ label, value, detail }: { label: string; value: number | str
         <p className="text-[11px] font-medium text-slate-100">{label}</p>
         <p className="mt-0.5 truncate text-[9px] text-slate-300/50">{detail}</p>
       </div>
-      <span className="text-xl font-semibold tracking-tight text-emerald-200 tabular-nums">{value}</span>
+      <span className="text-xl font-semibold tracking-tight text-[#ff9b68] tabular-nums">{value}</span>
     </div>
   );
 }
