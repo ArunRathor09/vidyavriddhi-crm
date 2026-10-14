@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, GraduationCap, LogOut, Menu, Search, Settings, UserRound } from "lucide-react";
+import { Bell, Command, GraduationCap, LogOut, Menu, Search, Settings, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -13,16 +13,28 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { SidebarContent } from "@/components/dashboard/sidebar";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
+import { CommandPalette } from "@/components/dashboard/command-palette";
 import { createClient } from "@/lib/supabase/client";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { navGroups } from "@/lib/constants/nav";
 
 export function Topbar() {
   const [open, setOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
   const [search, setSearch] = useState("");
   const router = useRouter();
   const pathname = usePathname();
-  const currentArea = navGroups.flatMap((group) => group.items).find((item) => item.href === pathname);
+  const currentArea = navGroups
+    .flatMap((group) => group.items)
+    .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+
+  useEffect(() => {
+    function handleOpenCommandPalette() {
+      setCommandOpen(true);
+    }
+    window.addEventListener("crm:open-command-palette", handleOpenCommandPalette);
+    return () => window.removeEventListener("crm:open-command-palette", handleOpenCommandPalette);
+  }, []);
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,6 +87,17 @@ export function Topbar() {
       </form>
 
       <div className="ml-auto flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 gap-2 rounded-xl border-border/70 bg-card/70 px-2.5 text-[10px] font-medium text-muted-foreground shadow-none hover:bg-primary/[0.04] hover:text-foreground sm:px-3"
+          onClick={() => setCommandOpen(true)}
+          aria-label="Open quick navigation"
+        >
+          <Command className="h-3.5 w-3.5 text-primary" />
+          <span className="hidden sm:inline">Jump to</span>
+          <kbd className="hidden rounded border bg-muted px-1 py-0.5 text-[9px] sm:inline-flex">⌘ K</kbd>
+        </Button>
         <span className="mr-1 hidden items-center gap-2 rounded-full border border-border/70 bg-card/70 px-3 py-1.5 text-[10px] font-medium text-muted-foreground xl:inline-flex">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />
           Vidyavriddhi CRM
@@ -84,7 +107,6 @@ export function Topbar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative" aria-label="Follow-up shortcuts">
               <Bell className="h-4 w-4" />
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-amber-500" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
@@ -118,6 +140,7 @@ export function Topbar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </header>
   );
 }

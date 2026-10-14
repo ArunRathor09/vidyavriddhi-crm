@@ -1,19 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowDownToLine,
   ArrowRight,
   ArrowUpRight,
   BellRing,
-  CalendarDays,
   ChevronRight,
   CircleDollarSign,
   FileText,
   GraduationCap,
   Plus,
-  Sparkles,
   Target,
   TrendingUp,
 } from "lucide-react";
@@ -73,6 +70,7 @@ export function DashboardHome() {
     .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")))
     .slice(0, 4);
   const today = new Intl.DateTimeFormat("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
+  const hotLeads = leads.records.filter((lead) => lead.priority === "Hot").length;
 
   function exportDashboard() {
     const headers = ["Student", "Phone", "Email", "Source", "Pipeline", "Priority"];
@@ -85,72 +83,22 @@ export function DashboardHome() {
 
   return (
     <div className="mx-auto max-w-[1480px] space-y-6 md:space-y-7">
-      <section className="relative isolate overflow-hidden rounded-[26px] bg-[#10263a] px-5 py-6 text-white shadow-[0_24px_60px_-34px_oklch(0.18_0.025_253_/_55%)] sm:px-8 sm:py-8 xl:px-10">
-        <div aria-hidden="true" className="hero-grid pointer-events-none absolute inset-y-0 right-0 w-[62%] opacity-60" />
-        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-36 h-[390px] w-[390px] rounded-full border border-[#fe661d]/15" />
-        <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-24 h-[270px] w-[270px] rounded-full border border-[#075fa3]/30" />
-        <div aria-hidden="true" className="pointer-events-none absolute right-[12%] top-1/2 h-64 w-64 -translate-y-1/2 rounded-full bg-[#075fa3]/25 blur-3xl" />
-        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_310px] lg:items-center xl:grid-cols-[minmax(0,1fr)_350px]">
-          <div className="max-w-3xl">
-            <div className="mb-5 flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#fe661d]/30 bg-[#fe661d]/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-[#ffb18c]">
-                <Sparkles className="h-3 w-3" />
-                Admissions intelligence
-              </span>
-              {isDemo ? (
-                <Badge variant="outline" className="h-6 border-amber-200/20 bg-amber-300/10 px-2.5 text-[9px] font-semibold tracking-[0.1em] text-amber-200">DEMO DATA</Badge>
-              ) : !loading && errors.length === 0 ? (
-                <Badge variant="outline" className="h-6 border-sky-200/20 bg-sky-300/10 px-2.5 text-[9px] font-semibold tracking-[0.1em] text-sky-100">LIVE WORKSPACE</Badge>
-              ) : null}
-            </div>
-            <h1 className="max-w-2xl text-[clamp(2.25rem,5vw,4rem)] font-semibold leading-[1.04] tracking-[-0.055em]">
-              Every student&apos;s next chapter<span className="text-[#fe661d]">,</span> starts here.
-            </h1>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300/75 sm:text-[15px]">
-              Your global admissions desk, in focus. Move every enquiry forward with clarity, context and care.
-            </p>
-            <div className="mt-7 flex flex-wrap items-center gap-2.5">
-              <Button asChild className="h-10 rounded-xl bg-[#fe661d] px-4 text-xs font-bold text-white shadow-[0_8px_22px_-12px_rgb(254_102_29_/_90%)] hover:bg-[#eb5712]">
-                <Link href="/leads"><Plus className="mr-2 h-4 w-4" />Create new enquiry</Link>
-              </Button>
-              <Button variant="outline" onClick={exportDashboard} disabled={loading || leads.records.length === 0} className="h-10 rounded-xl border-white/15 bg-white/[0.04] px-4 text-xs font-medium text-white hover:bg-white/10 hover:text-white">
-                <ArrowDownToLine className="mr-2 h-3.5 w-3.5" />Export snapshot
-              </Button>
-              <span className="ml-1 inline-flex items-center gap-2 text-[10px] text-slate-300/60"><CalendarDays className="h-3.5 w-3.5" />{today}</span>
-            </div>
+      <header className="flex flex-col justify-between gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-end">
+        <div>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Admissions workspace</span>
+            {isDemo ? <Badge variant="outline" className="h-5 border-amber-300/70 bg-amber-50 px-2 text-[9px] text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">DEMO DATA</Badge> : !loading && errors.length === 0 ? <Badge variant="outline" className="h-5 border-emerald-300/70 bg-emerald-50 px-2 text-[9px] text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">LIVE WORKSPACE</Badge> : null}
           </div>
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] p-4 backdrop-blur-sm sm:p-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="rounded-lg bg-white px-1.5 py-0.5">
-                <Image
-                  src="/vidyavriddhi-logo.png"
-                  alt="Vidyavriddhi — a unit of JP Technologies"
-                  width={500}
-                  height={200}
-                  priority
-                  className="h-[48px] w-[120px] object-contain"
-                />
-              </div>
-              <span className="text-right text-[8px] font-semibold uppercase leading-relaxed tracking-[0.16em] text-slate-300/55">Student-first<br />admissions</span>
-            </div>
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-300/55">Daily pulse</p>
-                <p className="mt-1 text-sm font-semibold text-white">Your workspace at a glance</p>
-              </div>
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#fe661d]/15 text-[#ff9b68]"><TrendingUp className="h-4 w-4" /></span>
-            </div>
-            <div className="space-y-1">
-              <PulseRow label="Hot prospects" value={loading ? "—" : leads.records.filter((lead) => lead.priority === "Hot").length} detail="Need personal attention" />
-              <PulseRow label="Follow-ups due" value={loading ? "—" : todayFollowUps.length} detail="Keep the conversation moving" />
-              <PulseRow label="Applications moving" value={loading ? "—" : activeApplications.length} detail="Across your admissions pipeline" />
-            </div>
-            <Link href="/follow-ups" className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-[10px] font-semibold text-[#ffab80] transition-colors hover:text-white">
-              Open today&apos;s priorities <ArrowUpRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Dashboard</h1>
+          <p className="mt-1.5 text-xs text-muted-foreground">{today} <span className="mx-1.5 text-border">/</span> A clear view of every student journey.</p>
         </div>
-      </section>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={exportDashboard} disabled={loading || leads.records.length === 0}>
+            <ArrowDownToLine className="mr-2 h-4 w-4" />Export leads
+          </Button>
+          <Button asChild><Link href="/leads"><Plus className="mr-2 h-4 w-4" />New enquiry</Link></Button>
+        </div>
+      </header>
 
       {isDemo && (
         <div className="flex flex-col gap-2 rounded-xl border border-amber-200/80 bg-amber-50/70 px-4 py-3 text-sm dark:border-amber-900/60 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between">
@@ -166,7 +114,7 @@ export function DashboardHome() {
       )}
 
       <section aria-label="Key metrics" className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Total leads" value={loading ? "—" : leads.records.length} note={`${leads.records.filter((lead) => lead.priority === "Hot").length} hot-priority`} icon={Target} accent="blue" />
+        <MetricCard label="Total leads" value={loading ? "—" : leads.records.length} note={`${hotLeads} hot-priority`} icon={Target} accent="blue" />
         <MetricCard label="Active students" value={loading ? "—" : students.records.length} note="Profiles in your workspace" icon={GraduationCap} accent="blue" />
         <MetricCard label="Applications in progress" value={loading ? "—" : activeApplications.length} note="Across all admission stages" icon={FileText} accent="orange" />
         <MetricCard label="Fees collected" value={loading ? "—" : formatINR(paidTotal)} note={`${payments.records.filter((payment) => payment.status === "Paid").length} payments received`} icon={CircleDollarSign} accent="violet" />
@@ -318,18 +266,6 @@ function MetricCard({
         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${accents[accent].icon}`}><Icon className="h-4 w-4" /></span>
       </CardContent>
     </Card>
-  );
-}
-
-function PulseRow({ label, value, detail }: { label: string; value: number | string; detail: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl px-2.5 py-2.5 transition-colors hover:bg-white/[0.04]">
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-slate-100">{label}</p>
-        <p className="mt-0.5 truncate text-[9px] text-slate-300/50">{detail}</p>
-      </div>
-      <span className="text-xl font-semibold tracking-tight text-[#ff9b68] tabular-nums">{value}</span>
-    </div>
   );
 }
 

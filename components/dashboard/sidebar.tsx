@@ -1,27 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ArrowDown, ArrowUpRight, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronDown, Command, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navGroups } from "@/lib/constants/nav";
 
-const primaryItems = navGroups
-  .flatMap((group) => group.items)
-  .filter((item) => item.href === "/leads" || item.href === "/students");
-
-const itemDetails: Record<string, { index: string; detail: string }> = {
-  "/leads": { index: "01", detail: "Enquiry pipeline" },
-  "/students": { index: "02", detail: "Student directory" },
-};
-
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
+  const currentPage = navGroups.flatMap((group) => group.items).find((item) =>
+    pathname === item.href || pathname.startsWith(`${item.href}/`),
+  );
+
+  function openCommandPalette() {
+    window.dispatchEvent(new Event("crm:open-command-palette"));
+  }
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-[90px] items-center border-b border-sidebar-border px-4">
+      <div className="relative flex h-[84px] shrink-0 items-center border-b border-sidebar-border/80 px-4">
+        <span aria-hidden="true" className="pointer-events-none absolute inset-x-5 bottom-0 h-px bg-gradient-to-r from-transparent via-sidebar-primary/35 to-transparent" />
         <Link href="/dashboard" aria-label="Vidyavriddhi CRM home" className="flex w-full items-center justify-center rounded-xl bg-white px-2 py-1 shadow-sm">
           <Image
             src="/vidyavriddhi-logo.png"
@@ -34,79 +35,94 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       </div>
 
-      <nav aria-label="Student records navigation" className="relative flex-1 overflow-y-auto px-3 py-8">
+      <nav aria-label="Main navigation" className="crm-sidebar-scroll relative flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-3 py-5">
         <div aria-hidden="true" className="pointer-events-none absolute right-[-34px] top-16 h-40 w-40 rounded-full border border-white/[0.035]" />
-        <div aria-hidden="true" className="pointer-events-none absolute right-[-15px] top-[76px] h-[102px] w-[102px] rounded-full border border-white/[0.035]" />
-        <div className="relative mb-4 px-3">
-          <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-sidebar-primary">Your workspace</p>
-          <h2 className="mt-2 text-[18px] font-semibold leading-tight tracking-[-0.035em] text-sidebar-foreground">Student records<span className="text-sidebar-primary">.</span></h2>
-          <p className="mt-1 text-[10px] leading-relaxed text-sidebar-foreground/45">Two focused views. One student journey.</p>
+        <div className="relative mb-1 flex items-center justify-between rounded-xl border border-white/[0.055] bg-white/[0.025] px-3 py-2.5">
+          <span className="min-w-0">
+            <span className="block text-[8px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/40">Admissions desk</span>
+            <span className="mt-1 block truncate text-[11px] font-semibold text-sidebar-foreground/90">{currentPage?.title ?? "Student journey"}</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-300/10 bg-emerald-300/[0.06] px-2 py-1 text-[8px] font-medium text-emerald-200/75">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />Workspace
+          </span>
         </div>
-        <ul className="relative space-y-2">
-          {primaryItems.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(item.href + "/");
-            const details = itemDetails[item.href];
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "group relative flex min-h-[76px] items-center gap-3 overflow-hidden rounded-2xl border px-3.5 py-3 transition-all duration-200",
-                    active
-                      ? "border-white/[0.09] bg-white/[0.075] text-sidebar-foreground shadow-[0_12px_30px_-20px_rgb(0_0_0_/_80%)]"
-                      : "border-transparent text-sidebar-foreground/65 hover:border-white/[0.07] hover:bg-white/[0.035] hover:text-sidebar-foreground",
-                  )}
-                >
-                  {active && <span aria-hidden="true" className="absolute inset-y-3 left-0 w-[3px] rounded-r-full bg-sidebar-primary shadow-[0_0_16px_var(--sidebar-primary)]" />}
-                  <span className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all",
-                    active
-                      ? "border-sidebar-primary/25 bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_7px_20px_-12px_var(--sidebar-primary)]"
-                      : "border-white/[0.08] bg-white/[0.035] text-sidebar-foreground/65 group-hover:border-white/[0.12]",
-                  )}>
-                    <item.icon className="h-[17px] w-[17px]" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
-                      <span className="text-[13px] font-semibold tracking-tight">{item.title}</span>
-                      <span className={cn("text-[8px] font-bold tracking-[0.13em]", active ? "text-sidebar-primary" : "text-sidebar-foreground/30")}>{details.index}</span>
-                    </span>
-                    <span className="mt-1 block text-[9px] text-sidebar-foreground/40">{details.detail}</span>
-                  </span>
-                  <ArrowUpRight className={cn("h-3.5 w-3.5 shrink-0 transition-all", active ? "text-sidebar-primary" : "text-sidebar-foreground/0 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-sidebar-foreground/60")} />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-
-        <div className="relative mx-3 mt-8 flex items-center gap-2">
-          <span className="h-px flex-1 bg-sidebar-border" />
-          <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/30">Journey</span>
-          <span className="h-px flex-1 bg-sidebar-border" />
-        </div>
-        <div className="relative mx-3 mt-4 flex items-center gap-2.5 text-[9px] text-sidebar-foreground/45">
-          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-sidebar-primary/10 text-sidebar-primary"><ArrowDown className="h-3 w-3" /></span>
-          Enquiry <span className="h-px w-3 bg-sidebar-foreground/20" /> Student
-        </div>
+        {navGroups.map((group) => {
+          const groupHasCurrentPage = group.items.some((item) =>
+            pathname === item.href || pathname.startsWith(`${item.href}/`),
+          );
+          const expanded = !collapsedGroups.includes(group.label) || groupHasCurrentPage;
+          return (
+          <section key={group.label} className="relative">
+            <button
+              type="button"
+              aria-expanded={expanded}
+              onClick={() => setCollapsedGroups((groups) => groups.includes(group.label)
+                ? groups.filter((label) => label !== group.label)
+                : [...groups, group.label])}
+              className="group mb-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-white/[0.035]"
+            >
+              <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/45 group-hover:text-sidebar-foreground/70">{group.label}</span>
+              <span className="h-px flex-1 bg-sidebar-border/70" />
+              <span className="min-w-4 text-right text-[8px] font-medium tabular-nums text-sidebar-foreground/30">{String(group.items.length).padStart(2, "0")}</span>
+              <ChevronDown className={cn("h-3 w-3 text-sidebar-foreground/35 transition-transform duration-200", !expanded && "-rotate-90")} />
+            </button>
+            {expanded && (
+              <ul className="space-y-0.5">
+                {group.items.map((item) => {
+                  const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={onNavigate}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "group relative flex items-center gap-3 overflow-hidden rounded-xl border border-transparent px-3 py-[9px] text-[11px] font-medium transition-all duration-200",
+                          active
+                            ? "border-white/[0.07] bg-white/[0.065] text-sidebar-foreground shadow-[inset_0_0_0_1px_rgb(255_255_255_/_2%)]"
+                            : "text-sidebar-foreground/60 hover:bg-white/[0.035] hover:text-sidebar-foreground",
+                        )}
+                      >
+                        {active && <span aria-hidden="true" className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-sidebar-primary shadow-[0_0_14px_var(--sidebar-primary)]" />}
+                        <span className={cn("flex h-[25px] w-[25px] shrink-0 items-center justify-center rounded-lg transition-all", active ? "bg-sidebar-primary/15 text-sidebar-primary" : "text-sidebar-foreground/45 group-hover:bg-white/[0.06] group-hover:text-sidebar-foreground/80")}>
+                          <item.icon className="h-[14px] w-[14px]" />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                        {active
+                          ? <span className="h-1.5 w-1.5 rounded-full bg-sidebar-primary shadow-[0_0_8px_var(--sidebar-primary)]" />
+                          : <ArrowUpRight className="h-3 w-3 shrink-0 text-sidebar-foreground/0 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-sidebar-foreground/50" />}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+          );
+        })}
       </nav>
 
-      <div className="border-t border-sidebar-border p-4">
-        <div className="relative overflow-hidden rounded-2xl border border-sidebar-border bg-white/[0.035] p-3.5">
-          <div aria-hidden="true" className="pointer-events-none absolute -bottom-9 -right-8 h-24 w-24 rounded-full border border-sidebar-primary/10" />
-          <div className="relative flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-sidebar-primary" />
-            <span className="text-[10px] font-semibold text-sidebar-foreground/85">More clarity, less chasing.</span>
-          </div>
-          <p className="relative mt-2 text-[9px] leading-relaxed text-sidebar-foreground/40">
-            Every learner deserves a well-guided next step.
-          </p>
-        </div>
-        <div className="mt-3 flex items-center justify-between px-1 text-[8px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/30">
+      <div className="shrink-0 border-t border-sidebar-border/80 p-3">
+        <button
+          type="button"
+          onClick={openCommandPalette}
+          className="group mb-2.5 flex w-full items-center gap-2.5 rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-2.5 text-left transition-all hover:border-sidebar-primary/20 hover:bg-white/[0.065]"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary"><Command className="h-3.5 w-3.5" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[10px] font-semibold text-sidebar-foreground/80">Quick navigation</span>
+            <span className="mt-0.5 block text-[8px] text-sidebar-foreground/40">Jump anywhere in your CRM</span>
+          </span>
+          <ArrowRight className="h-3 w-3 text-sidebar-foreground/35 transition-transform group-hover:translate-x-0.5 group-hover:text-sidebar-primary" />
+        </button>
+        <Link href="/reports" onClick={onNavigate} className="group relative flex items-center gap-2 overflow-hidden rounded-xl border border-sidebar-border/80 bg-white/[0.025] px-3 py-2 transition-colors hover:bg-white/[0.05]">
+          <Sparkles className="h-3.5 w-3.5 shrink-0 text-sidebar-primary" />
+          <span className="min-w-0 flex-1 truncate text-[9px] font-medium text-sidebar-foreground/65">Admissions insights</span>
+          <ArrowUpRight className="h-3 w-3 shrink-0 text-sidebar-foreground/35 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+        </Link>
+        <div className="mt-2.5 flex items-center justify-between px-1 text-[8px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/30">
           <span>Vidyavriddhi</span>
-          <span>Student CRM</span>
+          <span>Student CRM · {String(navGroups.reduce((sum, group) => sum + group.items.length, 0)).padStart(2, "0")} tools</span>
         </div>
       </div>
     </div>

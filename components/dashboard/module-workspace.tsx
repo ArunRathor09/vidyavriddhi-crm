@@ -88,6 +88,7 @@ export function ModuleWorkspace({
   const { records, mode, error, reload, save, remove } = useCrmCollection(collection);
   const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState("All records");
+  const [sortBy, setSortBy] = useState("recent");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CrmRecord | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -110,6 +111,18 @@ export function ModuleWorkspace({
     });
     return matchesSearch && matchesFacets && (statusFilter === "All records" || recordStatus === statusFilter);
   }), [facets, moduleConfig.searchKeys, records, search, selectedFacets, statusFilter]);
+  const visibleRecords = useMemo(() => [...filteredRecords].sort((left, right) => {
+    if (sortBy === "name") {
+      const primaryKey = moduleConfig.columns.find((column) => "primary" in column && column.primary)?.key;
+      return String(left[primaryKey ?? "id"] ?? "").localeCompare(String(right[primaryKey ?? "id"] ?? ""));
+    }
+    if (sortBy === "status") {
+      return String(left.status ?? left.verification_status ?? "").localeCompare(String(right.status ?? right.verification_status ?? ""));
+    }
+    const leftDate = new Date(String(left.updated_at ?? left.created_at ?? 0)).getTime();
+    const rightDate = new Date(String(right.updated_at ?? right.created_at ?? 0)).getTime();
+    return (Number.isNaN(rightDate) ? 0 : rightDate) - (Number.isNaN(leftDate) ? 0 : leftDate);
+  }), [filteredRecords, moduleConfig.columns, sortBy]);
 
   function openCreate() {
     setEditing(null);
@@ -254,7 +267,7 @@ export function ModuleWorkspace({
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-7">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <div className="flex flex-col justify-between gap-4 border-b border-border/70 pb-5 md:flex-row md:items-end">
         <div>
           <div className="mb-2 flex items-center gap-2">
             <span className="text-[10px] font-bold tracking-[0.17em] text-primary">{moduleConfig.eyebrow}</span>
@@ -342,28 +355,29 @@ export function ModuleWorkspace({
       </div>
 
       <Card className="overflow-hidden rounded-2xl border-border/80 shadow-sm">
-        <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-4 border-b bg-muted/15 p-4 md:p-5">
           <div>
-            <h2 className="text-sm font-semibold">{moduleConfig.title} directory</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {filteredRecords.length} {filteredRecords.length === 1 ? "record" : "records"}
-              {statusFilter !== "All records" ? ` · ${statusFilter}` : ""}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-semibold">{moduleConfig.title} directory</h2>
+              <Badge variant="secondary" className="h-5 px-2 text-[10px] tabular-nums">{filteredRecords.length}</Badge>
+              <span className="text-xs text-muted-foreground">of {records.length} records</span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Search, refine and manage your {moduleConfig.title.toLowerCase()} in one place.</p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative sm:w-64">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_repeat(4,auto)]">
+            <div className="relative min-w-0">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                  placeholder={`Search ${moduleConfig.title.toLowerCase()}...`}
-                  aria-label={`Search ${moduleConfig.title.toLowerCase()}`}
-                className="h-9 pl-9"
+                placeholder={`Search ${moduleConfig.title.toLowerCase()}...`}
+                aria-label={`Search ${moduleConfig.title.toLowerCase()}`}
+                className="h-10 border-border/70 bg-background pl-9"
               />
             </div>
             {statuses.length > 0 && (
               <Select value={statusFilter} onValueChange={(value) => value && setStatusFilter(value)}>
-                <SelectTrigger aria-label="Filter by status" className="h-9 sm:w-44">
+                <SelectTrigger aria-label="Filter by status" className="h-10 w-full bg-background lg:w-44">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -382,7 +396,7 @@ export function ModuleWorkspace({
                   value={selectedFacets[facet.key] ?? allOption}
                   onValueChange={(value) => setSelectedFacets((current) => ({ ...current, [facet.key]: value ?? allOption }))}
                 >
-                  <SelectTrigger aria-label={`Filter by ${facet.label.toLowerCase()}`} className="h-9 sm:w-36">
+                  <SelectTrigger aria-label={`Filter by ${facet.label.toLowerCase()}`} className="h-10 w-full bg-background lg:w-40">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -392,13 +406,23 @@ export function ModuleWorkspace({
                 </Select>
               );
             })}
+            <Select value={sortBy} onValueChange={(value) => value && setSortBy(value)}>
+              <SelectTrigger aria-label="Sort records" className="h-10 w-full bg-background lg:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Recently updated</SelectItem>
+                <SelectItem value="name">Name A–Z</SelectItem>
+                <SelectItem value="status">Status A–Z</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
               {moduleConfig.columns.map((column) => (
-                <TableHead key={column.key} className="h-11 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <TableHead key={column.key} className="h-11 bg-muted/25 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                   {column.label}
                 </TableHead>
               ))}
@@ -408,7 +432,7 @@ export function ModuleWorkspace({
           <TableBody>
             {mode === "loading" ? (
               <TableRow><TableCell colSpan={moduleConfig.columns.length + 1} className="h-32 text-center text-sm text-muted-foreground"><LoaderCircle className="mr-2 inline h-4 w-4 animate-spin" />Loading {moduleConfig.title.toLowerCase()}…</TableCell></TableRow>
-            ) : filteredRecords.length === 0 ? (
+            ) : visibleRecords.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={moduleConfig.columns.length + 1} className="h-44">
                   <div className="flex flex-col items-center justify-center text-center">
@@ -419,8 +443,8 @@ export function ModuleWorkspace({
                   </div>
                 </TableCell>
               </TableRow>
-            ) : filteredRecords.map((record) => (
-              <TableRow key={record.id} className="group">
+            ) : visibleRecords.map((record) => (
+              <TableRow key={record.id} className="group even:bg-muted/[0.14]">
                 {moduleConfig.columns.map((column) => {
                   const value = record[column.key];
                   const columnType = "type" in column ? column.type : undefined;

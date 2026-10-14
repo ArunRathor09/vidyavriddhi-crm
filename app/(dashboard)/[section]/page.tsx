@@ -17,5 +17,5 @@ export default async function WorkspacePage({
   if (section === "settings") return <SettingsWorkspace />;
   if (!isCrmCollection(section)) notFound();
 
-  return <ModuleWorkspace collection={section} initialSearch={search ?? ""} />;
+  return <ModuleWorkspace key={`${section}:${search ?? ""}`} collection={section} initialSearch={search ?? ""} />;
 }
