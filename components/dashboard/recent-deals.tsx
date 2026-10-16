@@ -15,11 +15,11 @@ import { recentDeals, type DealStage } from "@/lib/constants/mock-data";
 import { formatINR } from "@/lib/format";
 
 const stageStyles: Record<DealStage, string> = {
-  New: "bg-slate-500/10 text-slate-600 dark:text-slate-300",
-  Qualified: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  Proposal: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  Negotiation: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-  Won: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  New: "bg-slate-500/10 text-slate-600",
+  Qualified: "bg-blue-500/10 text-blue-600",
+  Proposal: "bg-amber-500/10 text-amber-600",
+  Negotiation: "bg-purple-500/10 text-purple-600",
+  Won: "bg-emerald-500/10 text-emerald-600",
 };
 
 export function RecentDeals() {

@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { SidebarContent } from "@/components/dashboard/sidebar";
-import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import { CommandPalette } from "@/components/dashboard/command-palette";
 import { createClient } from "@/lib/supabase/client";
 import { getSupabaseConfig } from "@/lib/supabase/config";
@@ -56,14 +55,14 @@ export function Topbar() {
   }
 
   return (
-    <header className="z-20 flex h-[70px] shrink-0 items-center gap-3 border-b border-border/70 bg-card/85 px-4 backdrop-blur-xl md:gap-5 md:px-7">
+    <header className="z-20 flex h-[68px] shrink-0 items-center gap-3 border-b border-border bg-white px-4 md:gap-5 md:px-7">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation">
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[280px] border-sidebar-border bg-sidebar p-0 text-sidebar-foreground">
+        <SheetContent side="left" className="w-[280px] border-sidebar-border bg-white p-0 text-sidebar-foreground">
           <SheetTitle className="sr-only">Main navigation</SheetTitle>
           <SidebarContent onNavigate={() => setOpen(false)} />
         </SheetContent>
@@ -81,7 +80,7 @@ export function Topbar() {
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search student leads..."
           aria-label="Search student leads"
-          className="h-10 rounded-xl border-border/65 bg-muted/55 pl-10 text-xs shadow-none transition-colors placeholder:text-muted-foreground/75 focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-primary/15"
+          className="h-10 rounded-xl border-border bg-[#f7f9fb] pl-10 text-xs shadow-none transition-colors placeholder:text-muted-foreground/75 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/15"
         />
         <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-border/70 bg-card px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground sm:inline-flex">ENTER</kbd>
       </form>
@@ -102,7 +101,6 @@ export function Topbar() {
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />
           Vidyavriddhi CRM
         </span>
-        <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative" aria-label="Follow-up shortcuts">

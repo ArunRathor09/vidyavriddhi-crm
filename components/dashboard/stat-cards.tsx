@@ -18,8 +18,8 @@ export function StatCards() {
                   className={cn(
                     "inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 font-medium",
                     up
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                      : "bg-red-500/10 text-red-600 dark:text-red-400"
+                      ? "bg-emerald-500/10 text-emerald-600"
+                      : "bg-red-500/10 text-red-600"
                   )}
                 >
                   {up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}

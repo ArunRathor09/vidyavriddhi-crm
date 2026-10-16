@@ -24,15 +24,6 @@ import { formatINR } from "@/lib/format";
 
 const stages = ["New", "Contacted", "Interested", "Documents", "Applied", "Offer letter", "Admitted", "Payment complete"];
 
-function isToday(value: unknown) {
-  if (typeof value !== "string" || !value) return false;
-  const date = new Date(value);
-  const now = new Date();
-  return date.getFullYear() === now.getFullYear()
-    && date.getMonth() === now.getMonth()
-    && date.getDate() === now.getDate();
-}
-
 function initials(name: unknown) {
   return String(name ?? "")
     .split(/\s+/)
@@ -53,7 +44,17 @@ export function DashboardHome() {
   const loading = modules.some((module) => module.mode === "loading");
   const errors = modules.map((module) => module.error).filter((message): message is string => Boolean(message));
   const isDemo = modules.some((module) => module.mode === "demo");
-  const todayFollowUps = followUps.records.filter((record) => isToday(record.due_at) && record.status === "Open");
+  const now = new Date();
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+  const dueFollowUps = followUps.records
+    .filter((record) => {
+      if (record.status !== "Open" || typeof record.due_at !== "string") return false;
+      const dueAt = new Date(record.due_at).getTime();
+      return Number.isFinite(dueAt) && dueAt <= endOfToday.getTime();
+    })
+    .sort((left, right) => new Date(String(left.due_at)).getTime() - new Date(String(right.due_at)).getTime());
+  const overdueFollowUps = dueFollowUps.filter((record) => new Date(String(record.due_at)).getTime() < now.getTime());
   const activeApplications = applications.records.filter((record) => !["Admitted", "Rejected"].includes(String(record.status)));
   const paidTotal = payments.records
     .filter((record) => record.status === "Paid")
@@ -87,7 +88,7 @@ export function DashboardHome() {
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Admissions workspace</span>
-            {isDemo ? <Badge variant="outline" className="h-5 border-amber-300/70 bg-amber-50 px-2 text-[9px] text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">DEMO DATA</Badge> : !loading && errors.length === 0 ? <Badge variant="outline" className="h-5 border-emerald-300/70 bg-emerald-50 px-2 text-[9px] text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">LIVE WORKSPACE</Badge> : null}
+            {isDemo ? <Badge variant="outline" className="h-5 border-amber-300/70 bg-amber-50 px-2 text-[9px] text-amber-800">DEMO DATA</Badge> : !loading && errors.length === 0 ? <Badge variant="outline" className="h-5 border-emerald-300/70 bg-emerald-50 px-2 text-[9px] text-emerald-800">LIVE WORKSPACE</Badge> : null}
           </div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Dashboard</h1>
           <p className="mt-1.5 text-xs text-muted-foreground">{today} <span className="mx-1.5 text-border">/</span> A clear view of every student journey.</p>
@@ -101,9 +102,9 @@ export function DashboardHome() {
       </header>
 
       {isDemo && (
-        <div className="flex flex-col gap-2 rounded-xl border border-amber-200/80 bg-amber-50/70 px-4 py-3 text-sm dark:border-amber-900/60 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-amber-900 dark:text-amber-200"><span className="font-semibold">You&apos;re viewing sample data.</span> New records are saved only in this browser until Supabase is connected.</p>
-          <Button variant="link" asChild className="h-auto justify-start p-0 text-amber-800 dark:text-amber-200"><Link href="/settings">Set up Supabase <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+        <div className="flex flex-col gap-2 rounded-xl border border-amber-200/80 bg-amber-50/70 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-amber-900"><span className="font-semibold">You&apos;re viewing sample data.</span> New records are saved only in this browser until Supabase is connected.</p>
+          <Button variant="link" asChild className="h-auto justify-start p-0 text-amber-800"><Link href="/settings">Set up Supabase <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
         </div>
       )}
 
@@ -114,10 +115,10 @@ export function DashboardHome() {
       )}
 
       <section aria-label="Key metrics" className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Total leads" value={loading ? "—" : leads.records.length} note={`${hotLeads} hot-priority`} icon={Target} accent="blue" />
-        <MetricCard label="Active students" value={loading ? "—" : students.records.length} note="Profiles in your workspace" icon={GraduationCap} accent="blue" />
-        <MetricCard label="Applications in progress" value={loading ? "—" : activeApplications.length} note="Across all admission stages" icon={FileText} accent="orange" />
-        <MetricCard label="Fees collected" value={loading ? "—" : formatINR(paidTotal)} note={`${payments.records.filter((payment) => payment.status === "Paid").length} payments received`} icon={CircleDollarSign} accent="violet" />
+        <MetricCard href="/leads" label="Total leads" value={loading ? "—" : leads.records.length} note={`${hotLeads} hot-priority`} icon={Target} accent="blue" />
+        <MetricCard href="/students" label="Active students" value={loading ? "—" : students.records.length} note="Profiles in your workspace" icon={GraduationCap} accent="blue" />
+        <MetricCard href="/applications" label="Applications in progress" value={loading ? "—" : activeApplications.length} note="Across all admission stages" icon={FileText} accent="orange" />
+        <MetricCard href="/payments" label="Fees collected" value={loading ? "—" : formatINR(paidTotal)} note={`${payments.records.filter((payment) => payment.status === "Paid").length} payments received`} icon={CircleDollarSign} accent="violet" />
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
@@ -149,25 +150,33 @@ export function DashboardHome() {
         <Card className="rounded-2xl border-border/80 shadow-sm">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
             <div>
-              <CardTitle className="text-base">Today&apos;s follow-ups</CardTitle>
-              <p className="mt-1.5 text-xs text-muted-foreground">Counsellor callbacks and reminders</p>
+              <CardTitle className="text-base">Priority follow-ups</CardTitle>
+              <p className="mt-1.5 text-xs text-muted-foreground">Overdue and due today · oldest first</p>
             </div>
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"><BellRing className="h-4 w-4" /></span>
+            {overdueFollowUps.length > 0 ? (
+              <Badge variant="outline" className="border-rose-200 bg-rose-50 text-[10px] text-rose-700">{overdueFollowUps.length} overdue</Badge>
+            ) : (
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700"><BellRing className="h-4 w-4" /></span>
+            )}
           </CardHeader>
           <CardContent className="space-y-1">
-            {todayFollowUps.length ? todayFollowUps.slice(0, 4).map((followUp) => (
-              <Link key={followUp.id} href="/follow-ups" className="flex items-center gap-3 rounded-xl p-2.5 transition hover:bg-muted/70">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">{initials(followUp.contact_name)}</div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium">{String(followUp.title)}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{String(followUp.contact_name)} · {String(followUp.channel)}</p>
-                </div>
-                <span className="whitespace-nowrap text-[10px] text-muted-foreground">{new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" }).format(new Date(String(followUp.due_at)))}</span>
-              </Link>
-            )) : (
+            {dueFollowUps.length ? dueFollowUps.slice(0, 5).map((followUp) => {
+              const dueAt = new Date(String(followUp.due_at));
+              const overdue = dueAt.getTime() < now.getTime();
+              return (
+                <Link key={followUp.id} href="/follow-ups" className="flex items-center gap-3 rounded-xl p-2.5 transition hover:bg-muted/70">
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${overdue ? "bg-rose-100 text-rose-700" : "bg-primary/10 text-primary"}`}>{initials(followUp.contact_name)}</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-medium">{String(followUp.title)}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{String(followUp.contact_name)} · {String(followUp.channel)}</p>
+                  </div>
+                  <span className={`whitespace-nowrap text-[10px] font-medium ${overdue ? "text-rose-600" : "text-muted-foreground"}`}>{overdue ? "Overdue" : new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" }).format(dueAt)}</span>
+                </Link>
+              );
+            }) : (
               <div className="flex min-h-36 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/25 text-center">
                 <p className="text-xs font-medium">You&apos;re all caught up</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">No open follow-ups due today.</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">No overdue or due-today follow-ups.</p>
               </div>
             )}
             <Button variant="outline" size="sm" asChild className="mt-2 w-full">
@@ -189,7 +198,7 @@ export function DashboardHome() {
           <CardContent className="space-y-1">
             {latestLeads.length ? latestLeads.map((lead) => (
               <Link key={lead.id} href="/leads" className="group flex items-center gap-3 rounded-xl border border-transparent px-2.5 py-2.5 transition hover:border-border/70 hover:bg-muted/45">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-[10px] font-bold text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">{initials(lead.full_name)}</div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-[10px] font-bold text-sky-700">{initials(lead.full_name)}</div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-semibold">{String(lead.full_name)}</p>
                   <p className="mt-1 truncate text-[11px] text-muted-foreground">{String(lead.preferred_destination ?? "Destination not set")} · {String(lead.source ?? "—")}</p>
@@ -241,7 +250,9 @@ function MetricCard({
   note,
   icon: Icon,
   accent,
+  href,
 }: {
+  href: string;
   label: string;
   value: string | number;
   note: string;
@@ -249,23 +260,25 @@ function MetricCard({
   accent: "blue" | "sky" | "orange" | "violet";
 }) {
   const accents = {
-    blue: { icon: "bg-blue-50 text-[#075fa3] dark:bg-blue-950/60 dark:text-blue-300", bar: "bg-[#075fa3]" },
-    sky: { icon: "bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300", bar: "bg-sky-500" },
-    orange: { icon: "bg-orange-50 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300", bar: "bg-[#fe661d]" },
-    violet: { icon: "bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300", bar: "bg-violet-500" },
+    blue: { icon: "bg-blue-50 text-[#075fa3]", bar: "bg-[#075fa3]" },
+    sky: { icon: "bg-sky-50 text-sky-700", bar: "bg-sky-500" },
+    orange: { icon: "bg-orange-50 text-orange-700", bar: "bg-[#fe661d]" },
+    violet: { icon: "bg-violet-50 text-violet-700", bar: "bg-violet-500" },
   };
   return (
-    <Card className="relative rounded-2xl border-border/80 shadow-sm">
-      <span className={`absolute inset-x-5 top-0 h-[2px] rounded-b-full ${accents[accent].bar}`} />
-      <CardContent className="flex min-h-[118px] items-start justify-between p-4.5 sm:p-5">
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
-          <p className="mt-2.5 truncate text-[28px] font-semibold leading-none tracking-[-0.045em] tabular-nums">{value}</p>
-          <p className="mt-2 truncate text-[10px] text-muted-foreground">{note}</p>
-        </div>
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${accents[accent].icon}`}><Icon className="h-4 w-4" /></span>
-      </CardContent>
-    </Card>
+    <Link href={href} className="group/metric block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+      <Card className="relative h-full rounded-2xl border-border/80 shadow-sm transition-transform group-hover/metric:-translate-y-0.5">
+        <span className={`absolute inset-x-5 top-0 h-[2px] rounded-b-full ${accents[accent].bar}`} />
+        <CardContent className="flex min-h-[118px] items-start justify-between p-4.5 sm:p-5">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+            <p className="mt-2.5 truncate text-[28px] font-semibold leading-none tracking-[-0.045em] tabular-nums">{value}</p>
+            <p className="mt-2 truncate text-[10px] text-muted-foreground">{note}</p>
+          </div>
+          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${accents[accent].icon}`}><Icon className="h-4 w-4" /></span>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 

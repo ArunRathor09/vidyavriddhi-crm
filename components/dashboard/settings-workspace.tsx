@@ -43,11 +43,11 @@ export function SettingsWorkspace() {
             <p className="mt-1.5 text-xs text-muted-foreground">Private PostgreSQL storage powered by Supabase.</p>
           </div>
           {connected ? (
-            <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300"><CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />Connected</Badge>
+            <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700"><CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />Connected</Badge>
           ) : connection.mode === "error" ? (
             <Badge variant="outline" className="border-destructive/30 text-destructive"><CircleHelp className="mr-1.5 h-3.5 w-3.5" />Needs attention</Badge>
           ) : (
-            <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">{connection.mode === "loading" ? "Checking…" : "Not configured"}</Badge>
+            <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">{connection.mode === "loading" ? "Checking…" : "Not configured"}</Badge>
           )}
         </CardHeader>
         <CardContent className="space-y-5 p-5">
@@ -58,15 +58,15 @@ export function SettingsWorkspace() {
             <ConnectionRow title="Private document storage" value="Private bucket and file policies included in schema.sql" connected />
           </div>
           {connection.mode === "demo" && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-sm dark:border-amber-900/60 dark:bg-amber-950/20">
-              <p className="font-semibold text-amber-900 dark:text-amber-200">Connect your Supabase project to enable production data.</p>
-              <ol className="mt-3 list-decimal space-y-2 pl-5 text-xs leading-relaxed text-amber-900/80 dark:text-amber-100/80">
+            <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-sm">
+              <p className="font-semibold text-amber-900">Connect your Supabase project to enable production data.</p>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-xs leading-relaxed text-amber-900/80">
                 <li>Create a project at <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-2">supabase.com/dashboard <ArrowUpRight className="inline h-3 w-3" /></a>.</li>
-                <li>Run <code className="rounded bg-amber-100 px-1 py-0.5 font-mono dark:bg-amber-900/50">supabase/schema.sql</code> in the project&apos;s SQL Editor.</li>
-                <li>Copy the Project URL and publishable key into <code className="rounded bg-amber-100 px-1 py-0.5 font-mono dark:bg-amber-900/50">.env.local</code> as <code className="font-mono">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="font-mono">NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>.</li>
+                <li>Run <code className="rounded bg-amber-100 px-1 py-0.5 font-mono">supabase/schema.sql</code> in the project&apos;s SQL Editor.</li>
+                <li>Copy the Project URL and publishable key into <code className="rounded bg-amber-100 px-1 py-0.5 font-mono">.env.local</code> as <code className="font-mono">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="font-mono">NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code>.</li>
                 <li>Restart the Next.js server, then create your workspace account.</li>
               </ol>
-              <p className="mt-3 text-[11px] font-medium text-amber-800 dark:text-amber-200">Never put a Supabase service-role key in a NEXT_PUBLIC_ variable or browser code.</p>
+              <p className="mt-3 text-[11px] font-medium text-amber-800">Never put a Supabase service-role key in a NEXT_PUBLIC_ variable or browser code.</p>
             </div>
           )}
           {connection.mode === "error" && (
@@ -109,7 +109,7 @@ export function SettingsWorkspace() {
 function ConnectionRow({ title, value, connected }: { title: string; value: string; connected: boolean }) {
   return (
     <div className="flex items-start gap-3 rounded-xl border p-3">
-      <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${connected ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" : "bg-muted text-muted-foreground"}`}>
+      <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${connected ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
         {connected ? <CheckCircle2 className="h-4 w-4" /> : <CircleHelp className="h-4 w-4" />}
       </span>
       <div className="min-w-0"><p className="text-xs font-semibold">{title}</p><p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{value}</p></div>
