@@ -26,6 +26,7 @@ export function Topbar() {
   const currentArea = navGroups
     .flatMap((group) => group.items)
     .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  const currentGroup = navGroups.find((group) => group.items.some((item) => item.href === currentArea?.href));
 
   useEffect(() => {
     function handleOpenCommandPalette() {
@@ -55,7 +56,7 @@ export function Topbar() {
   }
 
   return (
-    <header className="z-20 flex h-[68px] shrink-0 items-center gap-3 border-b border-border bg-white px-4 md:gap-5 md:px-7">
+    <header className="z-20 flex h-[68px] shrink-0 items-center gap-3 border-b border-slate-200 bg-white/95 px-4 shadow-[0_2px_10px_-9px_rgba(15,23,42,0.35)] md:gap-5 md:px-7">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Open navigation">
@@ -68,19 +69,19 @@ export function Topbar() {
         </SheetContent>
       </Sheet>
 
-      <div className="hidden min-w-[145px] sm:block">
-        <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-muted-foreground/75">Workspace</p>
-        <p className="mt-0.5 text-[13px] font-semibold tracking-tight">{currentArea?.title ?? "Admissions CRM"}</p>
+      <div className="hidden min-w-[150px] sm:block">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">{currentGroup?.label ?? "Vidyavriddhi"} / Workspace</p>
+        <p className="mt-0.5 text-[13px] font-semibold tracking-tight text-slate-800">{currentArea?.title ?? "Admissions CRM"}</p>
       </div>
-      <span className="hidden h-8 w-px bg-border sm:block" />
-      <form onSubmit={submitSearch} className="relative max-w-xl flex-1">
+      <span className="hidden h-8 w-px bg-slate-200 sm:block" />
+      <form onSubmit={submitSearch} className="relative max-w-2xl flex-1">
         <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search student leads..."
+          placeholder="Search leads by name, phone or email..."
           aria-label="Search student leads"
-          className="h-10 rounded-xl border-border bg-[#f7f9fb] pl-10 text-xs shadow-none transition-colors placeholder:text-muted-foreground/75 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/15"
+          className="h-10 rounded-xl border-slate-200 bg-slate-50 pl-10 text-xs shadow-none transition-colors placeholder:text-slate-400 focus-visible:border-blue-300 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/15"
         />
         <kbd className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-border/70 bg-card px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground sm:inline-flex">ENTER</kbd>
       </form>
@@ -89,7 +90,7 @@ export function Topbar() {
         <Button
           variant="outline"
           size="sm"
-          className="h-9 gap-2 rounded-xl border-border/70 bg-card/70 px-2.5 text-[10px] font-medium text-muted-foreground shadow-none hover:bg-primary/[0.04] hover:text-foreground sm:px-3"
+          className="h-9 gap-2 rounded-xl border-slate-200 bg-white px-2.5 text-[10px] font-medium text-slate-600 shadow-none hover:border-blue-200 hover:bg-blue-50/60 hover:text-foreground sm:px-3"
           onClick={() => setCommandOpen(true)}
           aria-label="Open quick navigation"
         >
@@ -97,7 +98,7 @@ export function Topbar() {
           <span className="hidden sm:inline">Jump to</span>
           <kbd className="hidden rounded border bg-muted px-1 py-0.5 text-[9px] sm:inline-flex">⌘ K</kbd>
         </Button>
-        <span className="mr-1 hidden items-center gap-2 rounded-full border border-border/70 bg-card/70 px-3 py-1.5 text-[10px] font-medium text-muted-foreground xl:inline-flex">
+        <span className="mr-1 hidden items-center gap-2 rounded-full border border-blue-100 bg-blue-50/70 px-3 py-1.5 text-[10px] font-semibold text-blue-800 xl:inline-flex">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" />
           Vidyavriddhi CRM
         </span>
@@ -119,8 +120,8 @@ export function Topbar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2 px-2">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-secondary text-xs font-semibold text-secondary-foreground">VV</AvatarFallback>
+              <Avatar className="h-8 w-8 rounded-xl">
+                <AvatarFallback className="rounded-xl bg-gradient-to-br from-blue-50 to-orange-50 text-xs font-bold text-primary ring-1 ring-blue-100">VV</AvatarFallback>
               </Avatar>
               <span className="hidden text-xs font-medium md:inline">Workspace</span>
             </Button>

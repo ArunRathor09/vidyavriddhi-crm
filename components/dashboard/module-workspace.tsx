@@ -286,10 +286,10 @@ export function ModuleWorkspace({
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-6 md:space-y-7">
-      <div className="flex flex-col justify-between gap-4 border-b border-border/70 pb-5 md:flex-row md:items-end">
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="text-[10px] font-bold tracking-[0.17em] text-primary">{moduleConfig.eyebrow}</span>
+      <header className="crm-page-heading flex flex-col justify-between gap-4 px-5 py-5 md:flex-row md:items-center md:px-7 md:py-6">
+        <div className="relative z-10">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-bold tracking-[0.17em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-[#fe661d]" />{moduleConfig.eyebrow}</span>
             {mode === "demo" && (
               <Badge variant="outline" className="h-5 border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700">
                 DEMO MODE
@@ -301,20 +301,20 @@ export function ModuleWorkspace({
               </Badge>
             )}
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight">{moduleConfig.title}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{moduleConfig.description}</p>
+          <h1 className="text-[26px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[32px]">{moduleConfig.title}</h1>
+          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-slate-500">{moduleConfig.description}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={exportCsv} disabled={filteredRecords.length === 0}>
+        <div className="relative z-10 flex flex-wrap gap-2">
+          <Button variant="outline" className="h-10 border-slate-200 bg-white/90 px-4 shadow-sm hover:border-blue-200 hover:bg-blue-50/50" onClick={exportCsv} disabled={filteredRecords.length === 0}>
             <ArrowDownToLine className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button onClick={openCreate}>
+          <Button className="h-10 rounded-xl bg-[#075fa3] px-4 shadow-[0_7px_16px_-10px_rgba(7,95,163,0.8)] hover:bg-[#064f88]" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
             Add {moduleConfig.singular}
           </Button>
         </div>
-      </div>
+      </header>
 
       {mode === "demo" && (
         <div className="flex flex-col gap-3 rounded-xl border border-amber-200/80 bg-amber-50/70 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
@@ -334,8 +334,9 @@ export function ModuleWorkspace({
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <Card className="rounded-2xl border-border/80">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <Card className="relative overflow-hidden rounded-2xl border-border/80">
+          <span className="absolute inset-x-5 top-0 h-[2px] rounded-b-full bg-primary/75" />
           <CardContent className="flex items-center justify-between p-5">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Total {moduleConfig.title.toLowerCase()}</p>
@@ -347,7 +348,8 @@ export function ModuleWorkspace({
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-2xl border-border/80">
+        <Card className="relative overflow-hidden rounded-2xl border-border/80">
+          <span className="absolute inset-x-5 top-0 h-[2px] rounded-b-full bg-[#fe661d]/80" />
           <CardContent className="flex items-center justify-between p-5">
             <div>
               <p className="text-xs font-medium text-muted-foreground">{collection === "leads" ? "Hot-priority leads" : "Needs attention"}</p>
@@ -359,7 +361,8 @@ export function ModuleWorkspace({
             </div>
           </CardContent>
         </Card>
-        <Card className="hidden rounded-2xl border-border/80 xl:block">
+        <Card className="relative hidden overflow-hidden rounded-2xl border-border/80 xl:block">
+          <span className="absolute inset-x-5 top-0 h-[2px] rounded-b-full bg-emerald-500/70" />
           <CardContent className="flex items-center justify-between p-5">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Workspace security</p>
@@ -374,7 +377,7 @@ export function ModuleWorkspace({
       </div>
 
       <Card className="overflow-hidden rounded-2xl border-border/80">
-        <div className="flex flex-col gap-4 border-b bg-muted/15 p-4 md:p-5">
+        <div className="flex flex-col gap-4 border-b border-slate-200/80 bg-gradient-to-r from-slate-50/95 via-white to-blue-50/35 p-4 md:p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -452,7 +455,7 @@ export function ModuleWorkspace({
         </div>
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/40 hover:bg-muted/40">
+            <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
                 <TableHead className="w-10 bg-muted/25">
                   <input
                     type="checkbox"
@@ -463,7 +466,7 @@ export function ModuleWorkspace({
                   />
                 </TableHead>
                 {moduleConfig.columns.map((column) => (
-                <TableHead key={column.key} className="h-11 bg-muted/25 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                <TableHead key={column.key} className="sticky top-0 h-11 bg-slate-50/95 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
                   {column.label}
                 </TableHead>
               ))}

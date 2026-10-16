@@ -84,20 +84,20 @@ export function DashboardHome() {
 
   return (
     <div className="mx-auto max-w-[1480px] space-y-6 md:space-y-7">
-      <header className="flex flex-col justify-between gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-end">
-        <div>
+      <header className="crm-page-heading flex flex-col justify-between gap-4 px-5 py-5 sm:flex-row sm:items-center sm:px-7 sm:py-6">
+        <div className="relative z-10">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Admissions workspace</span>
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-[#fe661d]" />Admissions workspace</span>
             {isDemo ? <Badge variant="outline" className="h-5 border-amber-300/70 bg-amber-50 px-2 text-[9px] text-amber-800">DEMO DATA</Badge> : !loading && errors.length === 0 ? <Badge variant="outline" className="h-5 border-emerald-300/70 bg-emerald-50 px-2 text-[9px] text-emerald-800">LIVE WORKSPACE</Badge> : null}
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Dashboard</h1>
-          <p className="mt-1.5 text-xs text-muted-foreground">{today} <span className="mx-1.5 text-border">/</span> A clear view of every student journey.</p>
+          <h1 className="text-[26px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[32px]">Dashboard</h1>
+          <p className="mt-1.5 text-xs text-slate-500">{today} <span className="mx-1.5 text-slate-300">/</span> A clear view of every student journey.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={exportDashboard} disabled={loading || leads.records.length === 0}>
+        <div className="relative z-10 flex flex-wrap gap-2">
+          <Button variant="outline" className="h-10 border-slate-200 bg-white/90 px-4 shadow-sm hover:border-blue-200 hover:bg-blue-50/50" onClick={exportDashboard} disabled={loading || leads.records.length === 0}>
             <ArrowDownToLine className="mr-2 h-4 w-4" />Export leads
           </Button>
-          <Button asChild><Link href="/leads"><Plus className="mr-2 h-4 w-4" />New enquiry</Link></Button>
+          <Button asChild className="h-10 rounded-xl bg-[#075fa3] px-4 shadow-[0_7px_16px_-10px_rgba(7,95,163,0.8)] hover:bg-[#064f88]"><Link href="/leads"><Plus className="mr-2 h-4 w-4" />New enquiry</Link></Button>
         </div>
       </header>
 
@@ -114,7 +114,7 @@ export function DashboardHome() {
         </div>
       )}
 
-      <section aria-label="Key metrics" className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Key metrics" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard href="/leads" label="Total leads" value={loading ? "—" : leads.records.length} note={`${hotLeads} hot-priority`} icon={Target} accent="blue" />
         <MetricCard href="/students" label="Active students" value={loading ? "—" : students.records.length} note="Profiles in your workspace" icon={GraduationCap} accent="blue" />
         <MetricCard href="/applications" label="Applications in progress" value={loading ? "—" : activeApplications.length} note="Across all admission stages" icon={FileText} accent="orange" />

@@ -27,17 +27,17 @@ export function SettingsWorkspace() {
   const error = connection.mode === "error" ? connection.error : accountError;
 
   return (
-    <div className="mx-auto max-w-[1180px] space-y-7">
-      <div>
-        <span className="text-[10px] font-bold tracking-[0.17em] text-primary">WORKSPACE ADMINISTRATION</span>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Settings</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">Manage your account, database connection, and student-data protections.</p>
-      </div>
+    <div className="mx-auto max-w-[1180px] space-y-6 md:space-y-7">
+      <header className="crm-page-heading px-5 py-5 sm:px-7 sm:py-6">
+        <span className="inline-flex items-center gap-1.5 text-[9px] font-bold tracking-[0.17em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-[#fe661d]" />WORKSPACE ADMINISTRATION</span>
+        <h1 className="mt-1 text-[26px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[32px]">Settings</h1>
+        <p className="mt-1.5 max-w-2xl text-[13px] text-slate-500">Manage your account, database connection, and student-data protections.</p>
+      </header>
 
       {error && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
 
       <Card className="overflow-hidden rounded-2xl border-border/80 shadow-sm">
-        <CardHeader className="flex flex-row items-start justify-between border-b bg-muted/20">
+        <CardHeader className="flex flex-row items-start justify-between border-b bg-gradient-to-r from-slate-50 to-white">
           <div>
             <CardTitle className="flex items-center gap-2 text-base"><Database className="h-4 w-4 text-primary" />Database connection</CardTitle>
             <p className="mt-1.5 text-xs text-muted-foreground">Private PostgreSQL storage powered by Supabase.</p>

@@ -100,6 +100,21 @@
     background: var(--sidebar);
   }
 
+  .crm-sidebar-edge {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .crm-sidebar-edge::after {
+    position: absolute;
+    z-index: 2;
+    inset: 0 0 0 auto;
+    width: 3px;
+    background: linear-gradient(180deg, #075fa3 0%, #72b7e3 38%, #d9e5ee 62%, #fe661d 100%);
+    content: "";
+    pointer-events: none;
+  }
+
   .crm-sidebar-scroll {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -114,19 +129,40 @@
 
   .crm-main {
     background-image:
-      radial-gradient(ellipse at 92% 0%, rgb(7 95 163 / 4%), transparent 38rem),
-      linear-gradient(180deg, #fbfcfd 0, var(--background) 38rem);
+      radial-gradient(ellipse at 92% 0%, rgb(7 95 163 / 5%), transparent 40rem),
+      linear-gradient(180deg, #ffffff 0, #f8fafc 22rem, var(--background) 48rem);
   }
 
   main [data-slot="card"] {
-    border: 1px solid var(--border);
-    box-shadow: 0 1px 2px rgb(18 38 58 / 3%), 0 6px 18px -16px rgb(18 38 58 / 18%);
+    border: 1px solid #e5eaf0;
+    box-shadow: 0 1px 2px rgb(18 38 58 / 3%), 0 12px 30px -26px rgb(18 38 58 / 30%);
     transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
   }
 
   main [data-slot="card"]:hover {
-    border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
-    box-shadow: 0 10px 24px -20px rgb(18 38 58 / 24%);
+    border-color: color-mix(in srgb, var(--primary) 18%, #e5eaf0);
+    box-shadow: 0 14px 32px -25px rgb(18 38 58 / 32%);
+  }
+
+  .crm-page-heading {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #e4ebf2;
+    border-radius: 1.25rem;
+    background:
+      radial-gradient(ellipse at 100% 0%, rgb(7 95 163 / 8%), transparent 34rem),
+      linear-gradient(110deg, #fff 0%, #fbfdff 66%, #fff8f3 100%);
+    box-shadow: 0 12px 30px -27px rgb(18 38 58 / 26%);
+  }
+
+  .crm-page-heading::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #075fa3 0%, #79bce5 55%, #fe661d 100%);
+    content: "";
   }
 }
 
