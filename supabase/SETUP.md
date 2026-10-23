@@ -1,22 +1,22 @@
-# Supabase setup
+# Vidyavriddhi CRM — Supabase setup
 
-The CRM uses Supabase Auth, its PostgreSQL database, and a private Storage bucket. The browser only uses the project URL and anon/publishable key; every table and file is scoped to the authenticated Supabase user with row-level security.
+The CRM uses Supabase Auth, its PostgreSQL database through the Supabase Data API, and a private Storage bucket. The app only needs the project URL and publishable key; `DATABASE_URL` is not required at runtime. Every table and file is scoped to the authenticated Supabase user with row-level security.
 
 ## Connect a project
 
-1. Create a Supabase project and open **SQL Editor**.
-2. Run [`schema.sql`](./schema.sql) to create the CRM tables, indexes, RLS policies, and private `student-documents` bucket.
-3. Copy the project URL and anon/publishable key from **Project Settings → API** into `.env.local`:
+1. Open **SQL Editor** in the Supabase project whose URL is configured in `.env`.
+2. Open [`schema.sql`](./schema.sql), copy its complete contents, paste them into a new SQL Editor query, and run it. This creates the eight CRM tables, indexes, per-user RLS policies, timestamp triggers, and private `student-documents` bucket.
+3. In **Project Settings → API**, ensure the matching Project URL and publishable key are configured in `.env.local`:
 
    ```dotenv
    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-or-publishable-key
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
    ```
 
-4. Restart the Next.js development server and open `/login`.
-5. Create the first account. If email confirmation is enabled in Supabase Auth, confirm the message before signing in.
+4. Restart the Next.js server, open `/login`, and create an account. If email confirmation is enabled in Supabase Auth, confirm the message before signing in.
+5. Open `/settings`. The connection should report active after the CRM tables are created and the signed-in account can read them.
 
-Do not put a Supabase service-role key in the browser, a `NEXT_PUBLIC_` variable, or this file. Never commit `.env.local`.
+Do not put a Supabase secret/service-role key in the browser, a `NEXT_PUBLIC_` variable, or this file. Never commit `.env.local`.
 
 ## Tables and access control
 
@@ -30,4 +30,4 @@ Without both Supabase variables, the dashboard uses clearly-labelled sample data
 
 ## Updating schema
 
-The schema is safe to run again for the current table and policy definitions. For future production changes, use versioned Supabase migrations and review data-preserving `ALTER TABLE` statements instead of dropping live tables.
+The current SQL is designed to be re-runnable for the existing table and policy definitions. For future production changes, use versioned Supabase migrations and review data-preserving `ALTER TABLE` statements instead of dropping live tables.

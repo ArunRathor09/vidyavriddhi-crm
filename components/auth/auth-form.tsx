@@ -2,8 +2,9 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ArrowRight, GraduationCap, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ArrowRight, LoaderCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,9 +68,9 @@ export function AuthForm() {
             <h1 className="text-2xl font-semibold tracking-tight">Your admissions workspace</h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Connect your Supabase project to enable account sign-in and private, persistent CRM data.</p>
           </div>
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900 dark:bg-amber-950/30">
-            <p className="font-semibold text-amber-900 dark:text-amber-200">Supabase is not configured yet.</p>
-            <p className="mt-1 text-xs leading-relaxed text-amber-800 dark:text-amber-200/80">Add your project URL and anon key to <code className="rounded bg-amber-100 px-1 font-mono dark:bg-amber-900/50">.env.local</code>, then restart Next.js. You can still explore the sample CRM in local demo mode.</p>
+          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
+            <p className="font-semibold text-amber-900">Supabase is not configured yet.</p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-800">Add your project URL and publishable key to <code className="rounded bg-amber-100 px-1 font-mono">.env.local</code>, then restart Next.js. You can still explore the sample CRM in local demo mode.</p>
           </div>
           <Button className="mt-5 w-full" asChild>
             <Link href="/dashboard">Continue in demo mode<ArrowRight className="ml-2 h-4 w-4" /></Link>
@@ -82,28 +83,28 @@ export function AuthForm() {
 
   return (
     <main className="grid min-h-dvh bg-background lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="relative hidden overflow-hidden bg-sidebar px-12 py-10 text-sidebar-foreground lg:flex lg:flex-col lg:justify-between xl:px-20">
-        <div className="absolute -right-36 -top-28 h-[480px] w-[480px] rounded-full border border-white/5 bg-white/[0.025]" />
-        <div className="absolute -bottom-40 -left-24 h-[520px] w-[520px] rounded-full border border-white/5 bg-white/[0.02]" />
+      <section className="relative hidden overflow-hidden border-r border-border bg-[linear-gradient(145deg,#eef6fc_0%,#ffffff_55%,#fff4ed_100%)] px-12 py-10 text-foreground lg:flex lg:flex-col lg:justify-between xl:px-20">
+        <div className="absolute -right-36 -top-28 h-[480px] w-[480px] rounded-full border border-primary/10 bg-white/40" />
+        <div className="absolute -bottom-40 -left-24 h-[520px] w-[520px] rounded-full border border-orange-200/50 bg-white/35" />
         <Brand inverted />
         <div className="relative z-10 max-w-lg">
           <BadgeLine />
-          <h2 className="mt-6 text-4xl font-semibold leading-[1.12] tracking-tight xl:text-5xl">Every student story, <span className="text-sidebar-primary">one clear path.</span></h2>
-          <p className="mt-5 max-w-md text-sm leading-7 text-sidebar-foreground/65">Bring enquiries, counsellor follow-ups, university applications, and fee collections into one calm, connected workspace.</p>
+          <h2 className="mt-6 text-4xl font-semibold leading-[1.12] tracking-tight xl:text-5xl">Every student story, <span className="text-primary">one clear path.</span></h2>
+          <p className="mt-5 max-w-md text-sm leading-7 text-slate-600">Bring enquiries, counsellor follow-ups, university applications, and fee collections into one calm, connected workspace.</p>
           <div className="mt-10 grid grid-cols-3 gap-3">
             {[
               ["01", "Enquiries"],
               ["02", "Applications"],
               ["03", "Admissions"],
             ].map(([number, label]) => (
-              <div key={number} className="rounded-xl border border-sidebar-border bg-white/[0.035] p-3">
-                <p className="text-[10px] font-semibold tracking-wider text-sidebar-primary">{number}</p>
+              <div key={number} className="rounded-xl border border-white/80 bg-white/75 p-3 shadow-sm">
+                <p className="text-[10px] font-semibold tracking-wider text-primary">{number}</p>
                 <p className="mt-2 text-xs font-medium">{label}</p>
               </div>
             ))}
           </div>
         </div>
-        <p className="relative z-10 text-[11px] text-sidebar-foreground/40">Secure, student-first admissions management.</p>
+        <p className="relative z-10 text-[11px] text-slate-500">Secure, student-first admissions management.</p>
       </section>
 
       <section className="flex items-center justify-center px-5 py-12 sm:px-10">
@@ -142,7 +143,7 @@ export function AuthForm() {
           )}
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            {isSignUp ? "Already have an account?" : "New to Nexora?"}{" "}
+            {isSignUp ? "Already have an account?" : "New to Vidyavriddhi?"}{" "}
             <button type="button" className="font-semibold text-primary hover:underline" onClick={() => { setConfirmationSent(false); setIsSignUp((current) => !current); }}>
               {isSignUp ? "Sign in" : "Create a workspace account"}
             </button>
@@ -156,12 +157,15 @@ export function AuthForm() {
 
 function Brand({ inverted = false }: { inverted?: boolean }) {
   return (
-    <Link href="/dashboard" className={`relative z-10 inline-flex w-fit items-center gap-3 ${inverted ? "text-sidebar-foreground" : "text-foreground"}`}>
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground"><GraduationCap className="h-5 w-5" /></span>
-      <span className="leading-tight">
-        <span className="block text-sm font-bold tracking-wide">NEXORA</span>
-        <span className="mt-0.5 block text-[10px] font-medium tracking-[0.17em] text-muted-foreground">EDUCATION CRM</span>
-      </span>
+    <Link href="/dashboard" aria-label="Vidyavriddhi CRM home" className={`relative z-10 inline-flex w-fit items-center rounded-xl bg-white p-2 shadow-sm ${inverted ? "ring-1 ring-white" : "ring-1 ring-border"}`}>
+      <Image
+        src="/vidyavriddhi-logo.png"
+        alt="Vidyavriddhi — a unit of JP Technologies"
+        width={500}
+        height={200}
+        priority
+        className="h-auto w-[210px] object-contain sm:w-[230px]"
+      />
     </Link>
   );
 }

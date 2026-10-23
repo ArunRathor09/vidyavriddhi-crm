@@ -66,15 +66,15 @@ function initials(value: unknown) {
 function statusClass(value: unknown) {
   const status = String(value ?? "").toLowerCase();
   if (["paid", "completed", "verified", "admitted", "payment complete", "offer letter"].includes(status)) {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (["overdue", "needs correction", "rejected", "hot"].includes(status)) {
-    return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300";
+    return "border-rose-200 bg-rose-50 text-rose-700";
   }
   if (["new", "open", "pending", "registration", "document verification"].includes(status)) {
-    return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300";
+    return "border-amber-200 bg-amber-50 text-amber-700";
   }
-  return "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300";
+  return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
 export function ModuleWorkspace({
@@ -88,6 +88,8 @@ export function ModuleWorkspace({
   const { records, mode, error, reload, save, remove } = useCrmCollection(collection);
   const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState("All records");
+  const [sortBy, setSortBy] = useState("recent");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CrmRecord | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -110,6 +112,20 @@ export function ModuleWorkspace({
     });
     return matchesSearch && matchesFacets && (statusFilter === "All records" || recordStatus === statusFilter);
   }), [facets, moduleConfig.searchKeys, records, search, selectedFacets, statusFilter]);
+  const visibleRecords = useMemo(() => [...filteredRecords].sort((left, right) => {
+    if (sortBy === "name") {
+      const primaryKey = moduleConfig.columns.find((column) => "primary" in column && column.primary)?.key;
+      return String(left[primaryKey ?? "id"] ?? "").localeCompare(String(right[primaryKey ?? "id"] ?? ""));
+    }
+    if (sortBy === "status") {
+      return String(left.status ?? left.verification_status ?? "").localeCompare(String(right.status ?? right.verification_status ?? ""));
+    }
+    const leftDate = new Date(String(left.updated_at ?? left.created_at ?? 0)).getTime();
+    const rightDate = new Date(String(right.updated_at ?? right.created_at ?? 0)).getTime();
+    return (Number.isNaN(rightDate) ? 0 : rightDate) - (Number.isNaN(leftDate) ? 0 : leftDate);
+  }), [filteredRecords, moduleConfig.columns, sortBy]);
+  const selectedVisibleRecords = visibleRecords.filter((record) => selectedIds.has(record.id));
+  const allVisibleSelected = visibleRecords.length > 0 && selectedVisibleRecords.length === visibleRecords.length;
 
   function openCreate() {
     setEditing(null);
@@ -247,49 +263,65 @@ export function ModuleWorkspace({
     toast.success("CSV export downloaded.");
   }
 
+  function exportSelectedCsv() {
+    const headings = moduleConfig.columns.map((column) => column.label);
+    const rows = selectedVisibleRecords.map((record) => moduleConfig.columns.map((column) => record[column.key] ?? ""));
+    downloadCsv(`nexora-${collection}-selected-${new Date().toISOString().slice(0, 10)}.csv`, [headings, ...rows]);
+    toast.success(`${selectedVisibleRecords.length} selected ${moduleConfig.title.toLowerCase()} exported.`);
+  }
+
+  function toggleVisibleSelection() {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) visibleRecords.forEach((record) => next.delete(record.id));
+      else visibleRecords.forEach((record) => next.add(record.id));
+      return next;
+    });
+  }
+
   const openCount = records.filter((record) =>
     ["Open", "Pending", "Overdue", "Needs correction"].includes(String(record.status ?? record.verification_status)),
   ).length;
   const highlight = collection === "leads" ? records.filter((record) => record.priority === "Hot").length : openCount;
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-7">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="text-[10px] font-bold tracking-[0.17em] text-primary">{moduleConfig.eyebrow}</span>
+    <div className="mx-auto max-w-[1440px] space-y-6 md:space-y-7">
+      <header className="crm-page-heading flex flex-col justify-between gap-4 px-5 py-5 md:flex-row md:items-center md:px-7 md:py-6">
+        <div className="relative z-10">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-bold tracking-[0.17em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-[#fe661d]" />{moduleConfig.eyebrow}</span>
             {mode === "demo" && (
-              <Badge variant="outline" className="h-5 border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+              <Badge variant="outline" className="h-5 border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700">
                 DEMO MODE
               </Badge>
             )}
             {mode === "supabase" && (
-              <Badge variant="outline" className="h-5 border-emerald-200 bg-emerald-50 px-2 text-[10px] font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+              <Badge variant="outline" className="h-5 border-emerald-200 bg-emerald-50 px-2 text-[10px] font-semibold text-emerald-700">
                 SUPABASE LIVE
               </Badge>
             )}
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight">{moduleConfig.title}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">{moduleConfig.description}</p>
+          <h1 className="text-[26px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[32px]">{moduleConfig.title}</h1>
+          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-slate-500">{moduleConfig.description}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={exportCsv} disabled={filteredRecords.length === 0}>
+        <div className="relative z-10 flex flex-wrap gap-2">
+          <Button variant="outline" className="h-10 border-slate-200 bg-white/90 px-4 shadow-sm hover:border-blue-200 hover:bg-blue-50/50" onClick={exportCsv} disabled={filteredRecords.length === 0}>
             <ArrowDownToLine className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Button onClick={openCreate}>
+          <Button className="h-10 rounded-xl bg-[#075fa3] px-4 shadow-[0_7px_16px_-10px_rgba(7,95,163,0.8)] hover:bg-[#064f88]" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
             Add {moduleConfig.singular}
           </Button>
         </div>
-      </div>
+      </header>
 
       {mode === "demo" && (
-        <div className="flex flex-col gap-3 rounded-xl border border-amber-200/80 bg-amber-50/70 px-4 py-3 text-sm dark:border-amber-900/60 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-amber-900 dark:text-amber-200">
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-200/80 bg-amber-50/70 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-amber-900">
             <span className="font-semibold">Demo workspace.</span> Changes are saved in this browser only, not to a database.
           </p>
-          <Button variant="link" className="h-auto justify-start p-0 text-amber-800 dark:text-amber-200" onClick={() => router.push("/settings")}>
+          <Button variant="link" className="h-auto justify-start p-0 text-amber-800" onClick={() => router.push("/settings")}>
             Connect Supabase <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
           </Button>
         </div>
@@ -303,7 +335,8 @@ export function ModuleWorkspace({
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Card className="rounded-2xl border-border/80 shadow-sm">
+        <Card className="relative overflow-hidden rounded-2xl border-border/80">
+          <span className="absolute inset-x-5 top-0 h-[2px] rounded-b-full bg-primary/75" />
           <CardContent className="flex items-center justify-between p-5">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Total {moduleConfig.title.toLowerCase()}</p>
@@ -315,55 +348,71 @@ export function ModuleWorkspace({
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-2xl border-border/80 shadow-sm">
+        <Card className="relative overflow-hidden rounded-2xl border-border/80">
+          <span className="absolute inset-x-5 top-0 h-[2px] rounded-b-full bg-[#fe661d]/80" />
           <CardContent className="flex items-center justify-between p-5">
             <div>
               <p className="text-xs font-medium text-muted-foreground">{collection === "leads" ? "Hot-priority leads" : "Needs attention"}</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight">{mode === "loading" ? "—" : highlight}</p>
               <p className="mt-1 text-xs text-muted-foreground">{collection === "leads" ? "Ready for counsellor outreach" : "Open, pending, or overdue"}</p>
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
               <Filter className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
-        <Card className="hidden rounded-2xl border-border/80 shadow-sm xl:block">
+        <Card className="relative hidden overflow-hidden rounded-2xl border-border/80 xl:block">
+          <span className="absolute inset-x-5 top-0 h-[2px] rounded-b-full bg-emerald-500/70" />
           <CardContent className="flex items-center justify-between p-5">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Workspace security</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight">Private</p>
               <p className="mt-1 text-xs text-muted-foreground">Student records stay access-controlled</p>
             </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
               <ShieldCheck className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="overflow-hidden rounded-2xl border-border/80 shadow-sm">
-        <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-sm font-semibold">{moduleConfig.title} directory</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {filteredRecords.length} {filteredRecords.length === 1 ? "record" : "records"}
-              {statusFilter !== "All records" ? ` · ${statusFilter}` : ""}
-            </p>
+      <Card className="overflow-hidden rounded-2xl border-border/80">
+        <div className="flex flex-col gap-4 border-b border-slate-200/80 bg-gradient-to-r from-slate-50/95 via-white to-blue-50/35 p-4 md:p-5">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-sm font-semibold">{moduleConfig.title} directory</h2>
+                <Badge variant="secondary" className="h-5 px-2 text-[10px] tabular-nums">{filteredRecords.length}</Badge>
+                <span className="text-xs text-muted-foreground">of {records.length} records</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Search, refine and manage your {moduleConfig.title.toLowerCase()} in one place.</p>
+            </div>
+            <div className="flex min-h-8 items-center gap-2">
+              {selectedVisibleRecords.length > 0 && (
+                <>
+                  <span aria-live="polite" className="text-[11px] text-muted-foreground">{selectedVisibleRecords.length} selected</span>
+                  <Button variant="outline" size="sm" className="h-8" onClick={exportSelectedCsv}>
+                    <ArrowDownToLine className="mr-1.5 h-3.5 w-3.5" />Export selected
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+                </>
+              )}
+            </div>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative sm:w-64">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_repeat(4,auto)]">
+            <div className="relative min-w-0">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                  placeholder={`Search ${moduleConfig.title.toLowerCase()}...`}
-                  aria-label={`Search ${moduleConfig.title.toLowerCase()}`}
-                className="h-9 pl-9"
+                placeholder={`Search ${moduleConfig.title.toLowerCase()}...`}
+                aria-label={`Search ${moduleConfig.title.toLowerCase()}`}
+                className="h-10 border-border/70 bg-background pl-9"
               />
             </div>
             {statuses.length > 0 && (
               <Select value={statusFilter} onValueChange={(value) => value && setStatusFilter(value)}>
-                <SelectTrigger aria-label="Filter by status" className="h-9 sm:w-44">
+                <SelectTrigger aria-label="Filter by status" className="h-10 w-full bg-background lg:w-44">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -382,7 +431,7 @@ export function ModuleWorkspace({
                   value={selectedFacets[facet.key] ?? allOption}
                   onValueChange={(value) => setSelectedFacets((current) => ({ ...current, [facet.key]: value ?? allOption }))}
                 >
-                  <SelectTrigger aria-label={`Filter by ${facet.label.toLowerCase()}`} className="h-9 sm:w-36">
+                  <SelectTrigger aria-label={`Filter by ${facet.label.toLowerCase()}`} className="h-10 w-full bg-background lg:w-40">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -392,25 +441,44 @@ export function ModuleWorkspace({
                 </Select>
               );
             })}
+            <Select value={sortBy} onValueChange={(value) => value && setSortBy(value)}>
+              <SelectTrigger aria-label="Sort records" className="h-10 w-full bg-background lg:w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Recently updated</SelectItem>
+                <SelectItem value="name">Name A–Z</SelectItem>
+                <SelectItem value="status">Status A–Z</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/40 hover:bg-muted/40">
-              {moduleConfig.columns.map((column) => (
-                <TableHead key={column.key} className="h-11 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <TableRow className="bg-slate-50/95 hover:bg-slate-50/95">
+                <TableHead className="w-10 bg-muted/25">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all visible records"
+                    checked={allVisibleSelected}
+                    onChange={toggleVisibleSelection}
+                    className="h-4 w-4 cursor-pointer accent-primary"
+                  />
+                </TableHead>
+                {moduleConfig.columns.map((column) => (
+                <TableHead key={column.key} className="sticky top-0 h-11 bg-slate-50/95 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
                   {column.label}
                 </TableHead>
               ))}
-              <TableHead className="w-24 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Actions</TableHead>
+              <TableHead className="w-24 bg-muted/25 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {mode === "loading" ? (
-              <TableRow><TableCell colSpan={moduleConfig.columns.length + 1} className="h-32 text-center text-sm text-muted-foreground"><LoaderCircle className="mr-2 inline h-4 w-4 animate-spin" />Loading {moduleConfig.title.toLowerCase()}…</TableCell></TableRow>
-            ) : filteredRecords.length === 0 ? (
+              <TableRow><TableCell colSpan={moduleConfig.columns.length + 2} className="h-32 text-center text-sm text-muted-foreground"><LoaderCircle className="mr-2 inline h-4 w-4 animate-spin" />Loading {moduleConfig.title.toLowerCase()}…</TableCell></TableRow>
+            ) : visibleRecords.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={moduleConfig.columns.length + 1} className="h-44">
+                <TableCell colSpan={moduleConfig.columns.length + 2} className="h-44">
                   <div className="flex flex-col items-center justify-center text-center">
                     <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted"><Search className="h-4 w-4 text-muted-foreground" /></div>
                     <p className="text-sm font-medium">{records.length ? "No matching records" : `No ${moduleConfig.title.toLowerCase()} yet`}</p>
@@ -419,8 +487,22 @@ export function ModuleWorkspace({
                   </div>
                 </TableCell>
               </TableRow>
-            ) : filteredRecords.map((record) => (
-              <TableRow key={record.id} className="group">
+            ) : visibleRecords.map((record) => (
+              <TableRow key={record.id} className={`group even:bg-muted/[0.14] ${selectedIds.has(record.id) ? "bg-primary/[0.045]" : ""}`}>
+                <TableCell className="w-10">
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${moduleConfig.singular} ${String(record[moduleConfig.columns.find((column) => "primary" in column && column.primary)?.key ?? "id"] ?? "")}`}
+                    checked={selectedIds.has(record.id)}
+                    onChange={() => setSelectedIds((current) => {
+                      const next = new Set(current);
+                      if (next.has(record.id)) next.delete(record.id);
+                      else next.add(record.id);
+                      return next;
+                    })}
+                    className="h-4 w-4 cursor-pointer accent-primary"
+                  />
+                </TableCell>
                 {moduleConfig.columns.map((column) => {
                   const value = record[column.key];
                   const columnType = "type" in column ? column.type : undefined;
@@ -480,7 +562,7 @@ export function ModuleWorkspace({
               ))}
             </div>
             {collection === "documents" && mode === "demo" && (
-              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
                 Demo mode saves document details only. Configure Supabase to securely upload and preview files.
               </p>
             )}

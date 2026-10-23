@@ -38,18 +38,18 @@ export function ReportsWorkspace() {
   }
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-7">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
+    <div className="mx-auto max-w-[1440px] space-y-6 md:space-y-7">
+      <header className="crm-page-heading flex flex-col justify-between gap-4 px-5 py-5 sm:flex-row sm:items-center sm:px-7 sm:py-6">
+        <div className="relative z-10">
           <div className="mb-2 flex items-center gap-2">
-            <span className="text-[10px] font-bold tracking-[0.17em] text-primary">INSIGHTS & ANALYTICS</span>
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-bold tracking-[0.17em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-[#fe661d]" />INSIGHTS & ANALYTICS</span>
             {leads.mode === "demo" && <Badge variant="outline" className="text-[10px]">DEMO DATA</Badge>}
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight">Reports</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Understand lead sources, admission progress, and fee collections.</p>
+          <h1 className="text-[26px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[32px]">Reports</h1>
+          <p className="mt-1.5 text-[13px] text-slate-500">Understand lead sources, admission progress, and fee collections.</p>
         </div>
-        <Button onClick={downloadReport} disabled={loading}><ArrowDownToLine className="mr-2 h-4 w-4" />Export report</Button>
-      </div>
+        <Button className="relative z-10 h-10 rounded-xl bg-[#075fa3] px-4 shadow-[0_7px_16px_-10px_rgba(7,95,163,0.8)] hover:bg-[#064f88]" onClick={downloadReport} disabled={loading}><ArrowDownToLine className="mr-2 h-4 w-4" />Export report</Button>
+      </header>
 
       {errors.length > 0 && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">Could not load all report data: {errors.join(" ")}</div>}
 
@@ -102,7 +102,8 @@ function countBy(records: CrmRecord[], key: string) {
 
 function SummaryCard({ title, value, detail, icon: Icon }: { title: string; value: string | number; detail: string; icon: typeof BarChart3 }) {
   return (
-    <Card className="rounded-2xl border-border/80 shadow-sm">
+    <Card className="relative overflow-hidden rounded-2xl border-border/80 shadow-sm">
+      <span className="absolute inset-x-5 top-0 h-[2px] rounded-b-full bg-primary/70" />
       <CardContent className="flex items-start justify-between p-5">
         <div>
           <p className="text-xs font-medium text-muted-foreground">{title}</p>
