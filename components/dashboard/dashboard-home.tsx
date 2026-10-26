@@ -38,10 +38,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCrmCollection } from "@/hooks/use-crm-collection";
 import { useCrmOverview } from "@/hooks/use-crm-overview";
+import { RecentApplications } from "@/components/dashboard/recent-deals";
 import { downloadCsv } from "@/lib/csv";
 import { formatINR } from "@/lib/format";
 
 const stages = ["New", "Contacted", "Interested", "Documents", "Applied", "Offer letter", "Admitted", "Payment complete"];
+const applicationStages = ["Registration", "Document verification", "University application", "Offer letter", "Visa", "Admitted", "Rejected"];
 const sourcePalette = ["#087b83", "#fe7048", "#438fba", "#61b8a8", "#66789a", "#d9a441"];
 
 function initials(name: unknown) {
@@ -128,6 +130,34 @@ export function DashboardHome() {
         count: leads.records.filter((lead) => String(lead.created_at ?? "").slice(0, 7) === month.key).length,
       }))
       : [];
+  const applicationStageRows = applicationStages
+    .map((stage) => ({
+      name: stage,
+      count: applications.records.filter((application) => application.status === stage).length,
+    }))
+    .filter((stage) => stage.count > 0);
+  const maxApplicationStageCount = Math.max(1, ...applicationStageRows.map((stage) => stage.count));
+  const followUpWeek = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + index);
+    const dayKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    return {
+      key: dayKey,
+      label: index === 0 ? "Today" : new Intl.DateTimeFormat("en-IN", { weekday: "short" }).format(date),
+      count: followUps.records.filter((record) => {
+        if (record.status !== "Open" || typeof record.due_at !== "string") return false;
+        const dueDate = new Date(record.due_at);
+        return Number.isFinite(dueDate.getTime())
+          && `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, "0")}-${String(dueDate.getDate()).padStart(2, "0")}` === dayKey;
+      }).length,
+    };
+  });
+  const maxFollowUpCount = Math.max(1, ...followUpWeek.map((day) => day.count));
+  const applicationScope = applications.mode === "demo"
+    ? "Sample records"
+    : applications.hasMore ? "First 50 loaded records" : "All workspace records";
+  const followUpScope = followUps.mode === "demo"
+    ? "Sample records"
+    : followUps.hasMore ? "First 50 loaded records" : "All workspace records";
   const latestLeads = [...leads.records]
     .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")))
     .slice(0, 5);
@@ -430,7 +460,113 @@ export function DashboardHome() {
         </Card>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+      <section aria-label="Admissions workload charts" className="grid min-w-0 gap-4 xl:grid-cols-2">
+        <Card className="min-w-0 overflow-hidden rounded-2xl border-slate-200/80 shadow-sm">
+          <CardHeader className="flex flex-row items-start justify-between space-y-0 border-b border-slate-100 bg-gradient-to-r from-white to-indigo-50/50 pb-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-800"><GraduationCap className="h-4 w-4" /></span>
+                Application stage mix
+              </CardTitle>
+              <p className="mt-1.5 text-xs text-muted-foreground">Current admissions moving through each stage</p>
+            </div>
+            <Badge variant="outline" className="border-indigo-100 bg-white text-[9px] text-indigo-700">{applicationScope}</Badge>
+          </CardHeader>
+          <CardContent className="space-y-3 p-4 sm:p-5">
+            {applications.mode === "loading" ? (
+              <div className="flex h-36 items-center justify-center text-xs text-muted-foreground">Loading application stages…</div>
+            ) : applications.error ? (
+              <div role="alert" className="flex h-36 items-center justify-center rounded-xl border border-rose-100 bg-rose-50/50 px-4 text-center text-xs text-rose-800">
+                {applications.error}
+              </div>
+            ) : applicationStageRows.length === 0 ? (
+              <div className="flex h-36 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 text-center">
+                <p className="text-xs font-medium text-slate-700">No application stage data yet</p>
+                <Link href="/applications" className="mt-1 text-[11px] font-medium text-teal-800 hover:underline">Create an application</Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {applicationStageRows.map((stage) => (
+                  <Link
+                    key={stage.name}
+                    href={`/applications?status=${encodeURIComponent(stage.name)}`}
+                    className="group grid grid-cols-[minmax(104px,138px)_1fr_30px] items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`${stage.count} applications in ${stage.name}`}
+                  >
+                    <span className="truncate text-[10px] text-slate-600 group-hover:text-slate-900">{stage.name}</span>
+                    <span className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <span
+                        className="block h-full rounded-full transition-[width] duration-500"
+                        style={{
+                          width: `${Math.max(5, (stage.count / maxApplicationStageCount) * 100)}%`,
+                          background: stage.name === "Admitted"
+                            ? "linear-gradient(90deg,#10b981,#62c7a8)"
+                            : stage.name === "Rejected"
+                              ? "linear-gradient(90deg,#e11d48,#fb7185)"
+                              : "linear-gradient(90deg,#5967d8,#7f8af0)",
+                        }}
+                      />
+                    </span>
+                    <span className="text-right text-[10px] font-semibold tabular-nums text-slate-800">{stage.count}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="min-w-0 overflow-hidden rounded-2xl border-slate-200/80 shadow-sm">
+          <CardHeader className="flex flex-row items-start justify-between space-y-0 border-b border-slate-100 bg-gradient-to-r from-white to-orange-50/45 pb-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-100 text-orange-800"><CalendarClock className="h-4 w-4" /></span>
+                Follow-up load
+              </CardTitle>
+              <p className="mt-1.5 text-xs text-muted-foreground">Open callbacks scheduled over the next 7 days</p>
+            </div>
+            <Badge variant="outline" className="border-orange-100 bg-white text-[9px] text-orange-700">{followUpScope}</Badge>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-5">
+            {followUps.mode === "loading" ? (
+              <div className="flex h-36 items-center justify-center text-xs text-muted-foreground">Loading follow-up schedule…</div>
+            ) : followUps.error ? (
+              <div role="alert" className="flex h-36 items-center justify-center rounded-xl border border-rose-100 bg-rose-50/50 px-4 text-center text-xs text-rose-800">
+                {followUps.error}
+              </div>
+            ) : (
+              <Link href="/follow-ups?status=Open" className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Open follow-up schedule">
+                <div className="flex h-36 items-end justify-between gap-2 border-b border-slate-100 px-1 pb-2">
+                  {followUpWeek.map((day) => {
+                    const hasDueItems = day.count > 0;
+                    return (
+                      <div key={day.key} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
+                        <span className={`text-[9px] font-semibold tabular-nums ${hasDueItems ? "text-slate-700" : "text-slate-300"}`}>
+                          {hasDueItems ? day.count : ""}
+                        </span>
+                        <span className="flex h-24 w-full max-w-9 items-end overflow-hidden rounded-t-md bg-slate-50">
+                          <span
+                            className="block w-full rounded-t-md bg-gradient-to-t from-[#087b83] to-[#67c5b8] transition-[height] duration-500"
+                            style={{ height: hasDueItems ? `${Math.max(12, (day.count / maxFollowUpCount) * 100)}%` : "3px" }}
+                          />
+                        </span>
+                        <span className={`text-[9px] ${day.label === "Today" ? "font-semibold text-teal-800" : "text-slate-500"}`}>{day.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-2 text-[10px]">
+                  <span className="text-slate-500">Daily callback workload</span>
+                  <span className="font-semibold tabular-nums text-slate-800">
+                    {followUpWeek.reduce((sum, day) => sum + day.count, 0)} due this week
+                  </span>
+                </div>
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[1.15fr_1fr_1fr]">
         <Card className="overflow-hidden rounded-2xl border-border/80 shadow-sm">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
             <div>
@@ -453,6 +589,13 @@ export function DashboardHome() {
             )) : <EmptyMessage loading={loading} label="No enquiries yet" link="/leads" />}
           </CardContent>
         </Card>
+
+        <RecentApplications
+          records={applications.records}
+          mode={applications.mode}
+          error={applications.error}
+          reload={applications.reload}
+        />
 
         <Card className="rounded-2xl border-border/80 shadow-sm">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
