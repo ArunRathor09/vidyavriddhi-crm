@@ -20,15 +20,23 @@ export async function GET() {
   const graphVersion = process.env.WHATSAPP_GRAPH_API_VERSION?.trim();
   const templateName = process.env.WHATSAPP_TEMPLATE_NAME?.trim();
   const templateLanguage = process.env.WHATSAPP_TEMPLATE_LANGUAGE?.trim();
-  const configured = Boolean(
-    accessToken
-    && phoneNumberId && /^\d+$/.test(phoneNumberId)
-    && graphVersion && /^v\d+\.\d+$/.test(graphVersion)
-    && templateName && /^[a-zA-Z0-9_]+$/.test(templateName)
-    && templateLanguage && /^[a-zA-Z0-9_-]+$/.test(templateLanguage)
-    && getSupabaseServiceRoleKey(),
-  );
-  return Response.json({ data: { provider: "WhatsApp Cloud API", configured } });
+  const checks = [
+    { key: "WHATSAPP_ACCESS_TOKEN", ready: Boolean(accessToken) },
+    { key: "WHATSAPP_PHONE_NUMBER_ID", ready: Boolean(phoneNumberId && /^\d+$/.test(phoneNumberId)) },
+    { key: "WHATSAPP_GRAPH_API_VERSION", ready: Boolean(graphVersion && /^v\d+\.\d+$/.test(graphVersion)) },
+    { key: "WHATSAPP_TEMPLATE_NAME", ready: Boolean(templateName && /^[a-zA-Z0-9_]+$/.test(templateName)) },
+    { key: "WHATSAPP_TEMPLATE_LANGUAGE", ready: Boolean(templateLanguage && /^[a-zA-Z0-9_-]+$/.test(templateLanguage)) },
+    { key: "SUPABASE_SERVICE_ROLE_KEY", ready: getSupabaseServiceRoleKey() },
+  ];
+  const missing = checks.filter((check) => !check.ready).map((check) => check.key);
+  return Response.json({
+    data: {
+      provider: "WhatsApp Cloud API",
+      configured: missing.length === 0,
+      missing,
+      template: templateName && templateLanguage ? { name: templateName, language: templateLanguage } : null,
+    },
+  });
 }
 
 function getSupabaseServiceRoleKey() {

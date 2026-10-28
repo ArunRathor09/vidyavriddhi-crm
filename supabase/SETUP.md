@@ -42,7 +42,26 @@ Before applying the organization migration to a live project, take a database ba
 
 ## WhatsApp Cloud API
 
-For one-to-one template messages, configure `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_GRAPH_API_VERSION`, `WHATSAPP_TEMPLATE_NAME`, and `WHATSAPP_TEMPLATE_LANGUAGE` as server-only environment variables. This also requires the server-only `SUPABASE_SERVICE_ROLE_KEY` for protected message-audit writes. The configured Meta-approved template must contain one body text variable for the lead's name. Add the lead's phone number in international format and record explicit WhatsApp opt-in in the lead profile before using **Send WhatsApp template**. Sends are confirmed in the UI, checked again on the server for organization access and opt-in, and written to the organization-scoped message audit table. The API reports provider acceptance, not final delivery.
+To enable one-to-one follow-ups:
+
+1. In [Meta for Developers](https://developers.facebook.com/apps/), create/select a Meta app, add WhatsApp Cloud API, connect the business WhatsApp number, and grant the app `whatsapp_business_messaging` permission. Use a permanent/system-user access token for production rather than a short-lived test token.
+2. In WhatsApp Manager, create and wait for approval of a utility/follow-up template. The current CRM sender expects exactly one body text variable, populated with the lead's name. Keep the approved template name and language code as shown by Meta.
+3. Configure the following values in the server's ignored `.env.local` (never in a `NEXT_PUBLIC_` variable):
+
+   ```dotenv
+   WHATSAPP_ACCESS_TOKEN=
+   WHATSAPP_PHONE_NUMBER_ID=
+   WHATSAPP_GRAPH_API_VERSION=
+   WHATSAPP_TEMPLATE_NAME=
+   WHATSAPP_TEMPLATE_LANGUAGE=
+   SUPABASE_SERVICE_ROLE_KEY=
+   ```
+
+   `WHATSAPP_PHONE_NUMBER_ID` is the Cloud API phone-number ID, not the visible phone number. `WHATSAPP_GRAPH_API_VERSION` must be a supported Meta Graph API version, such as `vXX.X` with the current version substituted. The service-role key is needed for protected message-audit writes.
+4. Restart the Next.js server and open **Settings → WhatsApp Cloud API**. The readiness check identifies missing environment variable names without exposing secret values. It verifies configuration presence only; send a permitted test to an opted-in contact to verify token permissions and template setup.
+5. In **Leads**, save each student's number in international format (for example `+919876543210`) and record explicit WhatsApp opt-in. Use the row's WhatsApp action to review the recipient and confirm before sending.
+
+The CRM rechecks organization access, E.164-style phone format, and opt-in on the server; it submits only the configured approved template and writes the result to the organization-scoped message audit table. An accepted response means Meta accepted the request, not that the message was delivered. Outside the customer-service window, use an approved template; free-form messaging and inbound/delivery webhooks are not currently implemented. Never send unsolicited messages or share access tokens/service-role keys in chat.
 
 SMS, bulk campaigns, AI calling, and cloud telephony are not marked as connected: no provider credentials or configuration were provided for those services.
 
