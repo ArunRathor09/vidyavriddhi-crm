@@ -104,8 +104,6 @@ export function ModuleWorkspace({
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<CrmRecord | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [whatsappLead, setWhatsappLead] = useState<CrmRecord | null>(null);
-  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [selectedFacets, setSelectedFacets] = useState<Record<string, string>>(initialFacets);
   const router = useRouter();
   const facets = "facets" in moduleConfig ? moduleConfig.facets : noFacets;
@@ -189,32 +187,26 @@ export function ModuleWorkspace({
     }
   }
 
-  async function sendWhatsAppTemplate(record: CrmRecord) {
-    if (record.whatsapp_opt_in !== true) {
-      toast.error("Record explicit student consent before sending a WhatsApp message.");
+  function openWhatsAppDraft(record: CrmRecord) {
+    const rawPhone = String(record.phone ?? "").trim();
+    if (!rawPhone.startsWith("+") && !rawPhone.startsWith("00")) {
+      toast.error("Add this lead's phone with country code first (for example, +919876543210).");
+      return;
+    }
+    const phone = rawPhone.replace(/\D/g, "").replace(/^00/, "");
+    if (!phone || phone.length < 8 || phone.length > 15 || phone.startsWith("0")) {
+      toast.error("Add this lead's phone with country code first (for example, +919876543210).");
       return;
     }
 
-    setSendingWhatsApp(true);
-    try {
-      const response = await fetch("/api/integrations/whatsapp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId: record.id, requestId: crypto.randomUUID() }),
-      });
-      const payload: unknown = await response.json();
-      if (!response.ok) {
-        const message = typeof payload === "object" && payload !== null && "error" in payload && typeof payload.error === "string"
-          ? payload.error
-          : "WhatsApp could not accept this message.";
-        throw new Error(message);
-      }
-      toast.success("WhatsApp template accepted by the provider.");
-      setWhatsappLead(null);
-    } catch (sendError) {
-      toast.error(sendError instanceof Error ? sendError.message : "WhatsApp could not accept this message.");
-    } finally {
-      setSendingWhatsApp(false);
+    const name = String(record.full_name ?? "").trim();
+    const message = `Hi${name ? ` ${name}` : ""}, this is Vidyavriddhi. You recently enquired about admissions. How can we help you with your next steps?`;
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    if (record.whatsapp_opt_in !== true) {
+      toast.warning("WhatsApp draft opened. This lead has no recorded opt-in; confirm permission before sending.");
+    } else {
+      toast.success("WhatsApp opened with a follow-up draft. Review it and press Send in WhatsApp.");
     }
   }
 
@@ -722,30 +714,32 @@ export function ModuleWorkspace({
                   );
                 })}
                 <TableCell className="text-right">
-                  <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                  <div className="flex justify-end gap-1">
                     {collection === "leads" && (
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`Review WhatsApp follow-up for ${String(record.full_name ?? "lead")}`}
-                        title={record.whatsapp_opt_in === true ? "Review approved WhatsApp follow-up" : "Student WhatsApp consent is required"}
-                        disabled={record.whatsapp_opt_in !== true || mode !== "supabase"}
-                        onClick={() => setWhatsappLead(record)}
+                        className="text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                        aria-label={`Open WhatsApp draft for ${String(record.full_name ?? "lead")}`}
+                        title="Open WhatsApp with a personalized message draft"
+                        onClick={() => openWhatsAppDraft(record)}
                       >
                         <MessageCircle className="h-4 w-4" />
                       </Button>
                     )}
-                    {collection === "documents" && (
-                      <Button variant="ghost" size="icon-sm" aria-label="Preview document" onClick={() => void downloadDocument(record)}>
-                        <ArrowDownToLine className="h-4 w-4" />
+                    <div className="flex gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                      {collection === "documents" && (
+                        <Button variant="ghost" size="icon-sm" aria-label="Preview document" onClick={() => void downloadDocument(record)}>
+                          <ArrowDownToLine className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon-sm" aria-label={`Edit ${moduleConfig.singular}`} onClick={() => openEdit(record)}>
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button variant="ghost" size="icon-sm" aria-label={`Edit ${moduleConfig.singular}`} onClick={() => openEdit(record)}>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" aria-label={`Delete ${moduleConfig.singular}`} className="text-muted-foreground hover:text-destructive" onClick={() => void deleteRecord(record)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <Button variant="ghost" size="icon-sm" aria-label={`Delete ${moduleConfig.singular}`} className="text-muted-foreground hover:text-destructive" onClick={() => void deleteRecord(record)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </TableCell>
               </TableRow>
@@ -846,77 +840,6 @@ export function ModuleWorkspace({
         </DialogContent>
       </Dialog>
 
-      {collection === "leads" && (
-        <Dialog
-          open={Boolean(whatsappLead)}
-          onOpenChange={(open) => {
-            if (!open && !sendingWhatsApp) setWhatsappLead(null);
-          }}
-        >
-          <DialogContent className="max-w-md rounded-2xl">
-            <DialogHeader>
-              <div className="mb-1 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
-                <MessageCircle className="h-5 w-5" />
-              </div>
-              <DialogTitle>WhatsApp follow-up</DialogTitle>
-              <DialogDescription>
-                Review the recipient and consent before sending this workspace&apos;s approved template.
-              </DialogDescription>
-            </DialogHeader>
-            {whatsappLead && (
-              <div className="space-y-4">
-                <div className="rounded-xl border bg-slate-50/80 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">{String(whatsappLead.full_name ?? "Unnamed lead")}</p>
-                      <p className="mt-1 text-xs text-slate-600">{String(whatsappLead.phone ?? "Phone number missing")}</p>
-                    </div>
-                    <Badge variant="outline" className="shrink-0 border-emerald-200 bg-emerald-50 text-emerald-800">
-                      {whatsappLead.whatsapp_opt_in === true ? "Opted in" : "Consent required"}
-                    </Badge>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Badge variant="outline" className="bg-white text-[10px]">{String(whatsappLead.status ?? "New")}</Badge>
-                    <Badge variant="outline" className="bg-white text-[10px]">{String(whatsappLead.priority ?? "Priority not set")} priority</Badge>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-3.5 text-xs leading-relaxed text-teal-950">
-                  <p className="font-semibold">Approved template only</p>
-                  <p className="mt-1 text-teal-900/80">
-                    The configured Meta template will be sent with this student&apos;s name. Message content is managed and approved in Meta; delivery status may arrive after the provider accepts the request.
-                  </p>
-                </div>
-                {whatsappLead.whatsapp_opt_in !== true && (
-                  <p role="alert" className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                    <CircleAlert className="h-4 w-4 shrink-0" />
-                    Record explicit WhatsApp consent in the lead profile before contacting this student.
-                  </p>
-                )}
-              </div>
-            )}
-            <DialogFooter className="gap-2 sm:justify-end">
-              <Button type="button" variant="outline" disabled={sendingWhatsApp} onClick={() => setWhatsappLead(null)}>Cancel</Button>
-              <Button
-                type="button"
-                disabled={
-                  sendingWhatsApp
-                  || whatsappLead?.whatsapp_opt_in !== true
-                  || typeof whatsappLead.phone !== "string"
-                  || !/^\+[1-9]\d{7,14}$/.test(whatsappLead.phone)
-                }
-                onClick={() => whatsappLead && void sendWhatsAppTemplate(whatsappLead)}
-                className="bg-[#087b83] text-white hover:bg-[#08656c]"
-              >
-                {sendingWhatsApp ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-2 h-4 w-4" />}
-                {sendingWhatsApp ? "Sending…" : "Send approved template"}
-              </Button>
-            </DialogFooter>
-            {whatsappLead && (typeof whatsappLead.phone !== "string" || !/^\+[1-9]\d{7,14}$/.test(whatsappLead.phone)) && (
-              <p className="text-[11px] text-amber-800">Add a valid international-format number, such as +919876543210, to this lead first.</p>
-            )}
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }

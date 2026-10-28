@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowUpRight, CheckCircle2, CircleHelp, Database, KeyRound, MessageCircle, RotateCw, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, CircleHelp, Database, KeyRound, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,11 +35,6 @@ export function SettingsWorkspace() {
   const [inviteRole, setInviteRole] = useState<"member" | "admin">("member");
   const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
   const [inviting, setInviting] = useState(false);
-  const [whatsappReady, setWhatsappReady] = useState<boolean | null>(null);
-  const [whatsappError, setWhatsappError] = useState<string | null>(null);
-  const [whatsappMissing, setWhatsappMissing] = useState<string[]>([]);
-  const [whatsappTemplate, setWhatsappTemplate] = useState<{ name: string; language: string } | null>(null);
-  const [whatsappRefresh, setWhatsappRefresh] = useState(0);
 
   useEffect(() => {
     if (connection.mode !== "supabase") return;
@@ -73,46 +68,8 @@ export function SettingsWorkspace() {
     return () => { active = false; };
   }, [connection.mode]);
 
-  useEffect(() => {
-    if (connection.mode !== "supabase") return;
-    let active = true;
-    void fetch("/api/integrations/whatsapp/status", { cache: "no-store" }).then(async (response) => {
-      const payload: unknown = await response.json();
-      if (typeof payload !== "object" || payload === null) throw new Error("Integration readiness returned an invalid response.");
-      if (!response.ok || !("data" in payload) || typeof payload.data !== "object" || payload.data === null || !("configured" in payload.data) || typeof payload.data.configured !== "boolean") {
-        const message = "error" in payload && typeof payload.error === "string" ? payload.error : "Could not check WhatsApp readiness.";
-        throw new Error(message);
-      }
-      if (active) {
-        setWhatsappReady(payload.data.configured);
-        setWhatsappMissing(
-          "missing" in payload.data && Array.isArray(payload.data.missing)
-            ? payload.data.missing.filter((item): item is string => typeof item === "string")
-            : [],
-        );
-        setWhatsappTemplate(
-          "template" in payload.data
-          && typeof payload.data.template === "object"
-          && payload.data.template !== null
-          && "name" in payload.data.template
-          && typeof payload.data.template.name === "string"
-          && "language" in payload.data.template
-          && typeof payload.data.template.language === "string"
-            ? { name: payload.data.template.name, language: payload.data.template.language }
-            : null,
-        );
-      }
-    }).catch((statusError: unknown) => {
-      if (active) {
-        setWhatsappReady(false);
-        setWhatsappError(statusError instanceof Error ? statusError.message : "Could not check WhatsApp readiness.");
-      }
-    });
-    return () => { active = false; };
-  }, [connection.mode, whatsappRefresh]);
-
   const connected = connection.mode === "supabase";
-  const error = connection.mode === "error" ? connection.error : accountError ?? workspaceError ?? whatsappError;
+  const error = connection.mode === "error" ? connection.error : accountError ?? workspaceError;
 
   async function switchWorkspace(organizationId: string) {
     setSwitchingWorkspace(true);
@@ -267,98 +224,6 @@ export function SettingsWorkspace() {
             </CardContent>
           </Card>
         </div>
-      )}
-
-      {connected && (
-        <Card className="overflow-hidden rounded-2xl border-emerald-100 shadow-sm">
-          <CardHeader className="flex flex-col justify-between gap-4 border-b border-emerald-100 bg-gradient-to-r from-emerald-50/80 via-white to-teal-50/60 sm:flex-row sm:items-start">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800"><MessageCircle className="h-4 w-4" /></span>
-                WhatsApp Cloud API
-              </CardTitle>
-              <p className="mt-1.5 text-xs text-muted-foreground">Send approved, one-to-one follow-up templates to opted-in leads.</p>
-            </div>
-            <Badge variant="outline" className={whatsappReady === true ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}>
-              {whatsappReady === null ? "Checking…" : whatsappReady ? "Values present" : "Setup required"}
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-5 p-4 sm:p-5">
-            {whatsappError ? (
-              <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">{whatsappError}</p>
-            ) : null}
-            {whatsappReady && whatsappTemplate && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-800">Active approved template</p>
-                  <p className="mt-1 text-sm font-semibold text-emerald-950">{whatsappTemplate.name}</p>
-                </div>
-                <Badge variant="outline" className="border-emerald-200 bg-white text-emerald-800">{whatsappTemplate.language}</Badge>
-              </div>
-            )}
-            {whatsappMissing.length > 0 && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
-                <p className="text-xs font-semibold text-amber-950">Still needed on the server</p>
-                <p className="mt-1 text-[11px] text-amber-900/80">Missing or invalid settings are listed below. Secret values are never shown on this page.</p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {whatsappMissing.map((key) => (
-                    <code key={key} className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-[11px] text-amber-950">{key}</code>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="grid gap-3 md:grid-cols-3">
-              {[
-                { number: "01", title: "Meta business setup", text: "Create a Meta app, add WhatsApp Cloud API, connect your business number, and grant messaging permission." },
-                { number: "02", title: "Approved follow-up template", text: "Create and get approval for a template with one body text variable for the student name. Share its exact name and language." },
-                { number: "03", title: "Server configuration", text: "Add the WhatsApp and Supabase service-role settings to the server environment, then restart Next.js." },
-              ].map((step) => (
-                <div key={step.number} className="rounded-xl border bg-white p-3.5">
-                  <span className="text-[10px] font-bold tracking-[0.16em] text-teal-800">{step.number} / SETUP</span>
-                  <p className="mt-2 text-xs font-semibold text-slate-900">{step.title}</p>
-                  <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">{step.text}</p>
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4 sm:flex-row sm:items-center">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-900">Environment values required</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                  WHATSAPP_ACCESS_TOKEN · WHATSAPP_PHONE_NUMBER_ID · WHATSAPP_GRAPH_API_VERSION · WHATSAPP_TEMPLATE_NAME · WHATSAPP_TEMPLATE_LANGUAGE · SUPABASE_SERVICE_ROLE_KEY
-                </p>
-              </div>
-              <a
-                href="https://developers.facebook.com/apps/"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-teal-800 hover:underline"
-              >
-                Open Meta for Developers <ArrowUpRight className="h-3.5 w-3.5" />
-              </a>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                Status checks server configuration only; it does not validate Meta token permissions or guarantee delivery.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={whatsappReady === null}
-                onClick={() => {
-                  setWhatsappError(null);
-                  setWhatsappReady(null);
-                  setWhatsappRefresh((current) => current + 1);
-                }}
-              >
-                <RotateCw className="mr-1.5 h-3.5 w-3.5" />Recheck setup
-              </Button>
-            </div>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Never paste access tokens or the Supabase service-role key into chat or browser code. Add them only to the server&apos;s ignored <code>.env.local</code>. Messages require recorded opt-in; outside WhatsApp&apos;s customer-service window, Meta requires an approved template. Provider acceptance is not final delivery.
-            </p>
-          </CardContent>
-        </Card>
       )}
 
       <div className="grid gap-5 lg:grid-cols-2">
