@@ -35,8 +35,6 @@ export function SettingsWorkspace() {
   const [inviteRole, setInviteRole] = useState<"member" | "admin">("member");
   const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
   const [inviting, setInviting] = useState(false);
-  const [whatsappReady, setWhatsappReady] = useState<boolean | null>(null);
-  const [whatsappError, setWhatsappError] = useState<string | null>(null);
 
   useEffect(() => {
     if (connection.mode !== "supabase") return;
@@ -70,25 +68,8 @@ export function SettingsWorkspace() {
     return () => { active = false; };
   }, [connection.mode]);
 
-  useEffect(() => {
-    if (connection.mode !== "supabase") return;
-    let active = true;
-    void fetch("/api/integrations/whatsapp/status", { cache: "no-store" }).then(async (response) => {
-      const payload: unknown = await response.json();
-      if (typeof payload !== "object" || payload === null) throw new Error("Integration readiness returned an invalid response.");
-      if (!response.ok || !("data" in payload) || typeof payload.data !== "object" || payload.data === null || !("configured" in payload.data) || typeof payload.data.configured !== "boolean") {
-        const message = "error" in payload && typeof payload.error === "string" ? payload.error : "Could not check WhatsApp readiness.";
-        throw new Error(message);
-      }
-      if (active) setWhatsappReady(payload.data.configured);
-    }).catch((statusError: unknown) => {
-      if (active) setWhatsappError(statusError instanceof Error ? statusError.message : "Could not check WhatsApp readiness.");
-    });
-    return () => { active = false; };
-  }, [connection.mode]);
-
   const connected = connection.mode === "supabase";
-  const error = connection.mode === "error" ? connection.error : accountError ?? workspaceError ?? whatsappError;
+  const error = connection.mode === "error" ? connection.error : accountError ?? workspaceError;
 
   async function switchWorkspace(organizationId: string) {
     setSwitchingWorkspace(true);
@@ -243,29 +224,6 @@ export function SettingsWorkspace() {
             </CardContent>
           </Card>
         </div>
-      )}
-
-      {connected && (
-        <Card className="rounded-2xl border-border/80 shadow-sm">
-          <CardHeader className="flex flex-row items-start justify-between gap-4">
-            <div>
-              <CardTitle className="text-base">WhatsApp Cloud API</CardTitle>
-              <p className="mt-1.5 text-xs text-muted-foreground">One-to-one messages use an approved template and require recorded lead consent.</p>
-            </div>
-            <Badge variant="outline" className={whatsappReady ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}>
-              {whatsappReady === null ? "Checking…" : whatsappReady ? "Configured" : "Setup required"}
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-xs leading-relaxed text-muted-foreground">Configure these server-only environment variables and restart the app. The template must be approved by Meta and have one body text variable for the student name.</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {["WHATSAPP_ACCESS_TOKEN", "WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_GRAPH_API_VERSION", "WHATSAPP_TEMPLATE_NAME", "WHATSAPP_TEMPLATE_LANGUAGE", "SUPABASE_SERVICE_ROLE_KEY"].map((key) => (
-                <code key={key} className="rounded-lg border bg-muted/30 px-3 py-2 text-[11px]">{key}</code>
-              ))}
-            </div>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">Tokens are read only on the server and never returned by the status endpoint. SMS and cloud telephony remain disconnected because no provider was selected or configured.</p>
-          </CardContent>
-        </Card>
       )}
 
       <div className="grid gap-5 lg:grid-cols-2">

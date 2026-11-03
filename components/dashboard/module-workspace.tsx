@@ -187,29 +187,26 @@ export function ModuleWorkspace({
     }
   }
 
-  async function sendWhatsAppTemplate(record: CrmRecord) {
-    if (record.whatsapp_opt_in !== true) {
-      toast.error("Record explicit student consent before sending a WhatsApp message.");
+  function openWhatsAppDraft(record: CrmRecord) {
+    const rawPhone = String(record.phone ?? "").trim();
+    if (!rawPhone.startsWith("+") && !rawPhone.startsWith("00")) {
+      toast.error("Add this lead's phone with country code first (for example, +919876543210).");
       return;
     }
-    if (!window.confirm(`Send the configured WhatsApp template to ${String(record.full_name ?? "this lead")}?`)) return;
+    const phone = rawPhone.replace(/\D/g, "").replace(/^00/, "");
+    if (!phone || phone.length < 8 || phone.length > 15 || phone.startsWith("0")) {
+      toast.error("Add this lead's phone with country code first (for example, +919876543210).");
+      return;
+    }
 
-    try {
-      const response = await fetch("/api/integrations/whatsapp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId: record.id, requestId: crypto.randomUUID() }),
-      });
-      const payload: unknown = await response.json();
-      if (!response.ok) {
-        const message = typeof payload === "object" && payload !== null && "error" in payload && typeof payload.error === "string"
-          ? payload.error
-          : "WhatsApp could not accept this message.";
-        throw new Error(message);
-      }
-      toast.success("WhatsApp template accepted by the provider.");
-    } catch (sendError) {
-      toast.error(sendError instanceof Error ? sendError.message : "WhatsApp could not accept this message.");
+    const name = String(record.full_name ?? "").trim();
+    const message = `Hi${name ? ` ${name}` : ""}, this is Vidyavriddhi. You recently enquired about admissions. How can we help you with your next steps?`;
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    if (record.whatsapp_opt_in !== true) {
+      toast.warning("WhatsApp draft opened. This lead has no recorded opt-in; confirm permission before sending.");
+    } else {
+      toast.success("WhatsApp opened with a follow-up draft. Review it and press Send in WhatsApp.");
     }
   }
 
@@ -717,30 +714,32 @@ export function ModuleWorkspace({
                   );
                 })}
                 <TableCell className="text-right">
-                  <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                  <div className="flex justify-end gap-1">
                     {collection === "leads" && (
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`Send WhatsApp template to ${String(record.full_name ?? "lead")}`}
-                        title={record.whatsapp_opt_in === true ? "Send approved WhatsApp template" : "Student WhatsApp consent is required"}
-                        disabled={record.whatsapp_opt_in !== true}
-                        onClick={() => void sendWhatsAppTemplate(record)}
+                        className="text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                        aria-label={`Open WhatsApp draft for ${String(record.full_name ?? "lead")}`}
+                        title="Open WhatsApp with a personalized message draft"
+                        onClick={() => openWhatsAppDraft(record)}
                       >
                         <MessageCircle className="h-4 w-4" />
                       </Button>
                     )}
-                    {collection === "documents" && (
-                      <Button variant="ghost" size="icon-sm" aria-label="Preview document" onClick={() => void downloadDocument(record)}>
-                        <ArrowDownToLine className="h-4 w-4" />
+                    <div className="flex gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                      {collection === "documents" && (
+                        <Button variant="ghost" size="icon-sm" aria-label="Preview document" onClick={() => void downloadDocument(record)}>
+                          <ArrowDownToLine className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon-sm" aria-label={`Edit ${moduleConfig.singular}`} onClick={() => openEdit(record)}>
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
-                    )}
-                    <Button variant="ghost" size="icon-sm" aria-label={`Edit ${moduleConfig.singular}`} onClick={() => openEdit(record)}>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" aria-label={`Delete ${moduleConfig.singular}`} className="text-muted-foreground hover:text-destructive" onClick={() => void deleteRecord(record)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <Button variant="ghost" size="icon-sm" aria-label={`Delete ${moduleConfig.singular}`} className="text-muted-foreground hover:text-destructive" onClick={() => void deleteRecord(record)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </TableCell>
               </TableRow>
@@ -840,6 +839,7 @@ export function ModuleWorkspace({
           </form>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

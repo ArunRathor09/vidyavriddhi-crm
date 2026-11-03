@@ -40,11 +40,11 @@ The migration and indexes make the application tenant-aware and avoid downloadin
 
 Before applying the organization migration to a live project, take a database backup and test it against a staging copy. Backfilling `organization_id` and building search indexes can scan/rewrite existing tables and take locks; schedule the change for an appropriate maintenance window for large production datasets.
 
-## WhatsApp Cloud API
+## WhatsApp follow-up
 
-For one-to-one template messages, configure `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_GRAPH_API_VERSION`, `WHATSAPP_TEMPLATE_NAME`, and `WHATSAPP_TEMPLATE_LANGUAGE` as server-only environment variables. This also requires the server-only `SUPABASE_SERVICE_ROLE_KEY` for protected message-audit writes. The configured Meta-approved template must contain one body text variable for the lead's name. Add the lead's phone number in international format and record explicit WhatsApp opt-in in the lead profile before using **Send WhatsApp template**. Sends are confirmed in the UI, checked again on the server for organization access and opt-in, and written to the organization-scoped message audit table. The API reports provider acceptance, not final delivery.
+The CRM does not send messages through the Meta API. On a lead row, the WhatsApp icon opens `wa.me` in a new tab; WhatsApp Desktop or WhatsApp Web can handle the link. The lead's number is used as the recipient, and a personalized Vidyavriddhi follow-up is prefilled for the user to review and send manually. The CRM does not need WhatsApp API credentials, templates, webhooks, or a database migration for this workflow.
 
-SMS, bulk campaigns, AI calling, and cloud telephony are not marked as connected: no provider credentials or configuration were provided for those services.
+Store phone numbers with the country calling code (for example, `+919876543210`). The draft is not sent automatically; the user must review it and tap **Send** in WhatsApp. Respect the student's recorded contact preferences and obtain consent before sending a message. The WhatsApp Cloud API, automated delivery tracking, bulk campaigns, SMS, AI calling, and cloud telephony are not connected.
 
 ## Local demo mode
 
