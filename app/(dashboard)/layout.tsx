@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Topbar } from "@/components/dashboard/topbar";
+import { DashboardRouteGuard } from "@/components/dashboard/route-guard";
 
 export default function DashboardLayout({
   children,
@@ -7,12 +8,14 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-dvh overflow-hidden bg-background">
+    <div className="fixed inset-0 flex min-h-0 overflow-hidden bg-background">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar />
-        <main className="crm-main flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-7 xl:px-10">
-          {children}
+        <main className="crm-main min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-4 py-5 md:px-8 md:py-7 xl:px-10">
+          <DashboardRouteGuard>
+            {children}
+          </DashboardRouteGuard>
         </main>
       </div>
     </div>

@@ -4,20 +4,47 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ArrowRight, ArrowUpRight, ChevronDown, Command, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  ChevronDown,
+  Command,
+  Crown,
+  Shield,
+  Sparkles,
+  UserCog,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navGroups } from "@/lib/constants/nav";
+import { useAuth } from "@/lib/auth/auth-context";
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
-  const currentPage = navGroups.flatMap((group) => group.items).find((item) =>
-    pathname === item.href || pathname.startsWith(`${item.href}/`),
-  );
+  const { user, canAccess, isSuperAdmin: isSA, loading } = useAuth();
+
+  // Filter nav groups and items based on user's accessible modules
+  const filteredNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => canAccess(item.moduleKey)),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const currentPage = filteredNavGroups
+    .flatMap((group) => group.items)
+    .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
 
   function openCommandPalette() {
     window.dispatchEvent(new Event("crm:open-command-palette"));
   }
+
+  const totalTools = filteredNavGroups.reduce((sum, group) => sum + group.items.length, 0);
+  const roleBadge = user
+    ? isSA
+      ? { label: "Super Admin", icon: Crown, color: "border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-800" }
+      : { label: "Admin", icon: Shield, color: "border-sky-200 bg-sky-50 text-sky-800" }
+    : null;
 
   return (
     <div className="flex h-full flex-col">
@@ -37,6 +64,23 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav aria-label="Main navigation" className="crm-sidebar-scroll relative flex-1 space-y-5 overflow-x-hidden overflow-y-auto px-3.5 py-5">
         <div aria-hidden="true" className="pointer-events-none absolute right-[-34px] top-16 h-40 w-40 rounded-full border border-slate-200/60" />
+
+        {/* Role Badge */}
+        {roleBadge && !loading && (
+          <div className={cn(
+            "relative mb-1 flex items-center gap-2.5 rounded-xl border px-3 py-2.5 shadow-sm transition-all",
+            roleBadge.color,
+          )}>
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/60 shadow-sm">
+              <roleBadge.icon className="h-3.5 w-3.5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[8px] font-bold uppercase tracking-[0.2em] opacity-60">{roleBadge.label}</span>
+              <span className="mt-0.5 block truncate text-[11px] font-semibold">{user?.email}</span>
+            </span>
+          </div>
+        )}
+
         <div className="relative mb-1 flex items-center justify-between rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-3 py-3 shadow-sm">
           <span className="min-w-0">
             <span className="block text-[8px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/40">Admissions desk</span>
@@ -46,7 +90,8 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Workspace
           </span>
         </div>
-        {navGroups.map((group) => {
+
+        {filteredNavGroups.map((group) => {
           const groupHasCurrentPage = group.items.some((item) =>
             pathname === item.href || pathname.startsWith(`${item.href}/`),
           );
@@ -79,12 +124,12 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         className={cn(
                           "group relative flex items-center gap-3 overflow-hidden rounded-xl border px-3 py-[9px] text-[11px] font-medium transition-all duration-200",
                           active
-                            ? "border-blue-100 bg-gradient-to-r from-blue-50 via-white to-orange-50/45 text-[#075fa3] shadow-[0_3px_12px_-8px_rgba(7,95,163,0.5)]"
+                            ? "border-teal-100 bg-gradient-to-r from-teal-50 via-white to-orange-50/55 text-[#08656c] shadow-[0_3px_12px_-8px_rgba(8,123,131,0.42)]"
                             : "border-transparent text-sidebar-foreground/75 hover:border-slate-200/80 hover:bg-slate-50 hover:text-foreground",
                         )}
                       >
                         {active && <span aria-hidden="true" className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-primary" />}
-                        <span className={cn("flex h-[27px] w-[27px] shrink-0 items-center justify-center rounded-lg transition-all", active ? "bg-white text-[#075fa3] shadow-sm" : "text-sidebar-foreground/55 group-hover:bg-white group-hover:text-[#075fa3]")}>
+                        <span className={cn("flex h-[27px] w-[27px] shrink-0 items-center justify-center rounded-lg transition-all", active ? "bg-white text-[#087b83] shadow-sm" : "text-sidebar-foreground/55 group-hover:bg-white group-hover:text-[#087b83]")}>
                           <item.icon className="h-[14px] w-[14px]" />
                         </span>
                         <span className="min-w-0 flex-1 truncate">{item.title}</span>
@@ -100,13 +145,51 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </section>
           );
         })}
+
+        {/* Super Admin: User Management Link */}
+        {isSA && (
+          <section className="relative">
+            <div className="mb-1 flex w-full items-center gap-2 px-2.5 py-2">
+              <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/45">Administration</span>
+              <span className="h-px flex-1 bg-sidebar-border/70" />
+              <span className="min-w-4 text-right text-[8px] font-medium tabular-nums text-sidebar-foreground/30">01</span>
+            </div>
+            <ul className="space-y-0.5">
+              <li>
+                <Link
+                  href="/user-management"
+                  onClick={onNavigate}
+                  aria-current={pathname === "/user-management" ? "page" : undefined}
+                  className={cn(
+                    "group relative flex items-center gap-3 overflow-hidden rounded-xl border px-3 py-[9px] text-[11px] font-medium transition-all duration-200",
+                    pathname === "/user-management"
+                      ? "border-amber-100 bg-gradient-to-r from-amber-50 via-white to-orange-50/55 text-amber-800 shadow-[0_3px_12px_-8px_rgba(180,100,20,0.42)]"
+                      : "border-transparent text-sidebar-foreground/75 hover:border-amber-200/80 hover:bg-amber-50/50 hover:text-amber-900",
+                  )}
+                >
+                  {pathname === "/user-management" && <span aria-hidden="true" className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-amber-500" />}
+                  <span className={cn(
+                    "flex h-[27px] w-[27px] shrink-0 items-center justify-center rounded-lg transition-all",
+                    pathname === "/user-management"
+                      ? "bg-white text-amber-700 shadow-sm"
+                      : "text-sidebar-foreground/55 group-hover:bg-white group-hover:text-amber-700",
+                  )}>
+                    <UserCog className="h-[14px] w-[14px]" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">User Management</span>
+                  <span className="flex h-4 items-center rounded-full bg-amber-100 px-1.5 text-[7px] font-bold uppercase tracking-wide text-amber-700">Admin</span>
+                </Link>
+              </li>
+            </ul>
+          </section>
+        )}
       </nav>
 
       <div className="shrink-0 border-t border-sidebar-border bg-slate-50/70 p-3">
         <button
           type="button"
           onClick={openCommandPalette}
-          className="group mb-2.5 flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border bg-white px-3 py-2.5 text-left shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50/50"
+          className="group mb-2.5 flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border bg-white px-3 py-2.5 text-left shadow-sm transition-all hover:border-teal-200 hover:bg-teal-50/60"
         >
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary"><Command className="h-3.5 w-3.5" /></span>
           <span className="min-w-0 flex-1">
@@ -122,7 +205,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
         <div className="mt-2.5 flex items-center justify-between px-1 text-[8px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/30">
           <span>Vidyavriddhi</span>
-          <span>Student CRM · {String(navGroups.reduce((sum, group) => sum + group.items.length, 0)).padStart(2, "0")} tools</span>
+          <span>Student CRM · {String(totalTools).padStart(2, "0")} tools</span>
         </div>
       </div>
     </div>

@@ -2,10 +2,12 @@
 
 import { ArrowDownToLine, BarChart3, FileText, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCrmCollection } from "@/hooks/use-crm-collection";
+import { useCrmOverview } from "@/hooks/use-crm-overview";
 import { downloadCsv } from "@/lib/csv";
 import type { CrmRecord } from "@/lib/crm/config";
 import { formatINR } from "@/lib/format";
@@ -14,15 +16,21 @@ export function ReportsWorkspace() {
   const leads = useCrmCollection("leads");
   const applications = useCrmCollection("applications");
   const payments = useCrmCollection("payments");
-  const loading = [leads, applications, payments].some((collection) => collection.mode === "loading");
-  const errors = [leads, applications, payments].map((collection) => collection.error).filter((message): message is string => Boolean(message));
-  const sources = countBy(leads.records, "source");
-  const counsellors = countBy(leads.records, "counselor_name");
-  const stages = countBy(applications.records, "status");
+  const overview = useCrmOverview();
+  const loading = [leads, applications, payments].some((collection) => collection.mode === "loading") || overview.loading;
+  const errors = [...[leads, applications, payments].map((collection) => collection.error), overview.error].filter((message): message is string => Boolean(message));
+  const sources = overview.data ? mapCounts(overview.data.lead_sources) : countBy(leads.records, "source");
+  const counsellors = overview.data ? mapCounts(overview.data.counsellors) : countBy(leads.records, "counselor_name");
+  const stages = overview.data ? mapCounts(overview.data.application_stages) : countBy(applications.records, "status");
   const paid = payments.records.filter((record) => record.status === "Paid");
   const outstanding = payments.records.filter((record) => ["Pending", "Overdue", "Partially paid"].includes(String(record.status)));
-  const totalCollected = paid.reduce((total, record) => total + Number(record.amount ?? 0), 0);
-  const totalOutstanding = outstanding.reduce((total, record) => total + Number(record.amount ?? 0), 0);
+  const totalCollected = overview.data?.paid_total ?? paid.reduce((total, record) => total + Number(record.amount ?? 0), 0);
+  const totalOutstanding = overview.data?.outstanding_total ?? outstanding.reduce((total, record) => total + Number(record.amount ?? 0), 0);
+  const leadTotal = overview.data?.leads ?? leads.records.length;
+  const applicationTotal = overview.data?.applications ?? applications.records.length;
+  const leadTrends = overview.data
+    ? Object.entries(overview.data.lead_trends).sort(([left], [right]) => left.localeCompare(right)).map(([month, count]) => ({ month, count }))
+    : [];
 
   function downloadReport() {
     const rows = [
@@ -54,16 +62,17 @@ export function ReportsWorkspace() {
       {errors.length > 0 && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">Could not load all report data: {errors.join(" ")}</div>}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard title="Total enquiries" value={loading ? "—" : leads.records.length} detail="Captured student leads" icon={BarChart3} />
-        <SummaryCard title="Application conversion" value={loading || leads.records.length === 0 ? "—" : `${Math.round((applications.records.length / leads.records.length) * 100)}%`} detail={`${applications.records.length} applications tracked`} icon={TrendingUp} />
-        <SummaryCard title="Fees collected" value={loading ? "—" : formatINR(totalCollected)} detail={`${paid.length} completed payments`} icon={FileText} />
-        <SummaryCard title="Outstanding fees" value={loading ? "—" : formatINR(totalOutstanding)} detail={`${outstanding.length} payments to follow up`} icon={FileText} />
+        <SummaryCard title="Total enquiries" value={loading ? "—" : leadTotal.toLocaleString()} detail="Captured student leads" icon={BarChart3} />
+        <SummaryCard title="Application conversion" value={loading || leadTotal === 0 ? "—" : `${Math.round((applicationTotal / leadTotal) * 100)}%`} detail={`${applicationTotal.toLocaleString()} applications tracked`} icon={TrendingUp} />
+        <SummaryCard title="Fees collected" value={loading ? "—" : formatINR(totalCollected)} detail={`${(overview.data?.paid_payments ?? paid.length).toLocaleString()} completed payments`} icon={FileText} />
+        <SummaryCard title="Outstanding fees" value={loading ? "—" : formatINR(totalOutstanding)} detail={`${(overview.data?.outstanding_payments ?? outstanding.length).toLocaleString()} payments to follow up`} icon={FileText} />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
-        <DistributionCard title="Lead source mix" description="Enquiries grouped by their original source" rows={sources} total={leads.records.length} loading={loading} emptyLabel="No lead sources to report yet." />
-        <DistributionCard title="Counsellor performance" description="Assigned lead workload by counsellor" rows={counsellors} total={leads.records.length} loading={loading} emptyLabel="Assign counsellors to leads to see this report." />
-        <DistributionCard title="Admission funnel" description="Applications across the admission journey" rows={stages} total={applications.records.length} loading={loading} emptyLabel="Add applications to see your admission funnel." />
+        <LeadTrendCard rows={leadTrends} loading={loading} />
+        <DistributionCard title="Lead source mix" description="Enquiries grouped by their original source" rows={sources} total={leadTotal} loading={loading} emptyLabel="No lead sources to report yet." />
+        <DistributionCard title="Counsellor performance" description="Assigned lead workload by counsellor" rows={counsellors} total={leadTotal} loading={loading} emptyLabel="Assign counsellors to leads to see this report." />
+        <DistributionCard title="Admission funnel" description="Applications across the admission journey" rows={stages} total={applicationTotal} loading={loading} emptyLabel="Add applications to see your admission funnel." />
       </div>
 
       <Card className="rounded-2xl border-border/80 shadow-sm">
@@ -74,18 +83,51 @@ export function ReportsWorkspace() {
         <CardContent className="grid gap-3 sm:grid-cols-3">
           {["Paid", "Pending", "Overdue"].map((status) => {
             const matching = payments.records.filter((payment) => payment.status === status);
-            const amount = matching.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
+            const aggregate = overview.data?.payment_totals[status];
+            const amount = aggregate?.amount ?? matching.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0);
             return (
               <div key={status} className="rounded-xl border bg-muted/20 p-4">
                 <p className="text-xs font-medium text-muted-foreground">{status}</p>
                 <p className="mt-2 text-xl font-semibold">{loading ? "—" : formatINR(amount)}</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">{matching.length} {matching.length === 1 ? "payment" : "payments"}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">{(aggregate?.count ?? matching.length).toLocaleString()} {(aggregate?.count ?? matching.length) === 1 ? "payment" : "payments"}</p>
               </div>
             );
           })}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function LeadTrendCard({ rows, loading }: { rows: { month: string; count: number }[]; loading: boolean }) {
+  return (
+    <Card className="rounded-2xl border-border/80 shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-base">Enquiry trend</CardTitle>
+        <p className="text-xs text-muted-foreground">New leads recorded per month · last six months</p>
+      </CardHeader>
+      <CardContent className="h-[260px]">
+        {loading ? (
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading trend…</div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={rows} margin={{ top: 8, right: 12, bottom: 0, left: -14 }}>
+              <CartesianGrid stroke="#e8edf3" strokeDasharray="4 5" vertical={false} />
+              <XAxis
+                dataKey="month"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#64748b", fontSize: 10 }}
+                tickFormatter={(month: string) => new Date(`${month}-01T00:00:00`).toLocaleDateString("en-IN", { month: "short" })}
+              />
+              <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 10 }} />
+              <Tooltip />
+              <Line type="monotone" dataKey="count" name="New enquiries" stroke="#075fa3" strokeWidth={2.5} dot={{ r: 3, fill: "#075fa3" }} activeDot={{ r: 5 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -96,6 +138,12 @@ function countBy(records: CrmRecord[], key: string) {
     totals.set(label, (totals.get(label) ?? 0) + 1);
   }
   return [...totals.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((left, right) => right.count - left.count);
+}
+
+function mapCounts(counts: Record<string, number>) {
+  return Object.entries(counts)
     .map(([label, count]) => ({ label, count }))
     .sort((left, right) => right.count - left.count);
 }

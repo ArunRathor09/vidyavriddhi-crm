@@ -2,6 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 
+/** Routes that require super_admin role. */
+const SUPER_ADMIN_ROUTES = ["/user-management"];
+
 export async function proxy(request: NextRequest) {
   const config = getSupabaseConfig();
   if (!config) return NextResponse.next({ request });
@@ -22,6 +25,7 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
   const isLoginPage = request.nextUrl.pathname === "/login";
+
   if (!user && !isLoginPage) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
@@ -37,6 +41,27 @@ export async function proxy(request: NextRequest) {
     const redirectResponse = NextResponse.redirect(dashboardUrl);
     for (const cookie of response.cookies.getAll()) redirectResponse.cookies.set(cookie);
     return redirectResponse;
+  }
+
+  // Protect super-admin-only routes
+  if (user) {
+    const pathname = request.nextUrl.pathname;
+    const isSuperAdminRoute = SUPER_ADMIN_ROUTES.some(
+      (route) => pathname === route || pathname.startsWith(`${route}/`),
+    );
+
+    if (isSuperAdminRoute) {
+      const role = user.user_metadata?.role;
+      // Allow if role is super_admin or undefined (first user / legacy)
+      if (role !== "super_admin" && role !== undefined && role !== null) {
+        const dashboardUrl = request.nextUrl.clone();
+        dashboardUrl.pathname = "/dashboard";
+        dashboardUrl.search = "";
+        const redirectResponse = NextResponse.redirect(dashboardUrl);
+        for (const cookie of response.cookies.getAll()) redirectResponse.cookies.set(cookie);
+        return redirectResponse;
+      }
+    }
   }
 
   return response;
