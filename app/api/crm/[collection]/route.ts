@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isCrmCollection } from "@/lib/crm/config";
+import { runRecordAutomation } from "@/lib/crm/automation-events";
 import { createClient } from "@/lib/supabase/server";
 
 const schemas = {
@@ -160,7 +161,14 @@ export async function POST(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Could not save the CRM record." }, { status: 500 });
   }
 
-  return Response.json({ data }, { status: 201 });
+  const automation = await runRecordAutomation({
+    supabase: auth.supabase,
+    userId: auth.user.id,
+    collection,
+    record: data as Record<string, unknown>,
+  });
+
+  return Response.json({ data, automation }, { status: 201 });
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
@@ -190,8 +198,22 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const auth = await getAuthenticatedClient();
   if ("response" in auth) return auth.response;
 
+  const table = collection.replaceAll("-", "_");
+
+  const { data: existingRecord, error: existingError } = await auth.supabase
+    .from(table)
+    .select("*")
+    .eq("id", parsedInput.data.id)
+    .eq("user_id", auth.user.id)
+    .maybeSingle();
+  if (existingError) {
+    console.error(`Failed to read the existing CRM record in "${collection}".`, existingError);
+    return Response.json({ error: "Could not update the CRM record." }, { status: 500 });
+  }
+  if (!existingRecord) return Response.json({ error: "Record not found." }, { status: 404 });
+
   const { data, error } = await auth.supabase
-    .from(collection.replaceAll("-", "_"))
+    .from(table)
     .update(validation.data)
     .eq("id", parsedInput.data.id)
     .eq("user_id", auth.user.id)
@@ -206,7 +228,15 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   }
   if (!data) return Response.json({ error: "Record not found." }, { status: 404 });
 
-  return Response.json({ data });
+  const automation = await runRecordAutomation({
+    supabase: auth.supabase,
+    userId: auth.user.id,
+    collection,
+    record: data as Record<string, unknown>,
+    previous: existingRecord as Record<string, unknown>,
+  });
+
+  return Response.json({ data, automation });
 }
 
 export async function DELETE(request: Request, { params }: RouteContext) {

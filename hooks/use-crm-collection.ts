@@ -11,6 +11,7 @@ type CollectionResponse = {
   data?: CrmRecord | CrmRecord[];
   error?: string;
   code?: string;
+  automation?: string | null;
 };
 
 function getStorageKey(collection: CrmCollection) {
@@ -108,7 +109,7 @@ export function useCrmCollection(collection: CrmCollection) {
         : [{ ...input, id: `demo-${collection}-${crypto.randomUUID()}`, created_at: new Date().toISOString() }, ...records];
       window.localStorage.setItem(getStorageKey(collection), JSON.stringify(nextRecords));
       setRecords(nextRecords);
-      return;
+      return null;
     }
     if (mode !== "supabase") throw new Error("Wait for the CRM workspace to finish loading before saving.");
 
@@ -125,6 +126,8 @@ export function useCrmCollection(collection: CrmCollection) {
     setRecords((current) => id
       ? current.map((record) => record.id === id ? savedRecord : record)
       : [savedRecord, ...current]);
+
+    return payload.automation ?? null;
   }, [collection, mode, records]);
 
   const remove = useCallback(async (id: string) => {
@@ -147,8 +150,11 @@ export function useCrmCollection(collection: CrmCollection) {
 
   const runSave = useCallback(async (input: Record<string, unknown>, id?: string) => {
     try {
-      await save(input, id);
-      toast.success(id ? "Record updated." : "Record added.");
+      const automation = await save(input, id);
+      toast.success(
+        id ? "Record updated." : "Record added.",
+        automation ? { description: automation } : undefined,
+      );
       return true;
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : "Could not save this record.";

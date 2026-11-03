@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AutomationCenter } from "@/components/dashboard/automation-center";
 import { useCrmCollection } from "@/hooks/use-crm-collection";
 import { downloadCsv } from "@/lib/csv";
 import { formatINR } from "@/lib/format";
@@ -40,7 +41,8 @@ export function DashboardHome() {
   const applications = useCrmCollection("applications");
   const payments = useCrmCollection("payments");
   const activities = useCrmCollection("activities");
-  const modules = [leads, students, followUps, applications, payments, activities];
+  const documents = useCrmCollection("documents");
+  const modules = [leads, students, followUps, applications, payments, activities, documents];
   const loading = modules.some((module) => module.mode === "loading");
   const errors = modules.map((module) => module.error).filter((message): message is string => Boolean(message));
   const isDemo = modules.some((module) => module.mode === "demo");
@@ -82,6 +84,16 @@ export function DashboardHome() {
     toast.success("Lead report downloaded.");
   }
 
+  async function reloadAutomationCollections() {
+    await Promise.all([
+      leads.reload(),
+      followUps.reload(),
+      payments.reload(),
+      applications.reload(),
+      documents.reload(),
+    ]);
+  }
+
   return (
     <div className="mx-auto max-w-[1480px] space-y-6 md:space-y-7">
       <header className="crm-page-heading flex flex-col justify-between gap-4 px-5 py-5 sm:flex-row sm:items-center sm:px-7 sm:py-6">
@@ -120,6 +132,16 @@ export function DashboardHome() {
         <MetricCard href="/applications" label="Applications in progress" value={loading ? "—" : activeApplications.length} note="Across all admission stages" icon={FileText} accent="orange" />
         <MetricCard href="/payments" label="Fees collected" value={loading ? "—" : formatINR(paidTotal)} note={`${payments.records.filter((payment) => payment.status === "Paid").length} payments received`} icon={CircleDollarSign} accent="violet" />
       </section>
+
+      <AutomationCenter
+        leads={leads.records}
+        followUps={followUps.records}
+        payments={payments.records}
+        applications={applications.records}
+        documents={documents.records}
+        mode={followUps.mode}
+        onApplied={reloadAutomationCollections}
+      />
 
       <section className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
         <Card className="rounded-2xl border-border/80 shadow-sm">
