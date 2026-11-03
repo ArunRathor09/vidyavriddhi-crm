@@ -8,6 +8,7 @@ import {
   Landmark,
   Target,
   TrendingUp,
+  Workflow,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -24,6 +25,7 @@ export const navGroups: NavGroup[] = [
     label: "Student CRM",
     items: [
       { title: "Leads", href: "/leads", icon: Target },
+      { title: "Pipeline", href: "/pipeline", icon: Workflow },
       { title: "Students", href: "/students", icon: GraduationCap },
       { title: "Follow-ups", href: "/follow-ups", icon: BellRing },
     ],

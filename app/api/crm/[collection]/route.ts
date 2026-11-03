@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { isCrmCollection } from "@/lib/crm/config";
+import { crmModules, isCrmCollection } from "@/lib/crm/config";
+import { getActiveOrganization } from "@/lib/crm/server-organization";
 import { createClient } from "@/lib/supabase/server";
 
 const schemas = {
@@ -11,6 +12,7 @@ const schemas = {
     counselor_name: z.string().max(160).optional(),
     status: z.enum(["New", "Contacted", "Interested", "Documents", "Applied", "Offer letter", "Admitted", "Payment complete"]),
     priority: z.enum(["Hot", "Warm", "Cold"]),
+    whatsapp_opt_in: z.boolean().optional(),
     preferred_destination: z.string().max(160).optional(),
     budget: z.coerce.number().nonnegative().optional(),
     next_follow_up_date: z.string().date().optional().or(z.literal("")),
@@ -99,7 +101,16 @@ async function getAuthenticatedClient() {
       ),
     };
   }
-  return { supabase, user };
+  const active = await getActiveOrganization(supabase, user.id);
+  if ("error" in active) {
+    return {
+      response: Response.json(
+        { error: active.error, code: active.code },
+        { status: active.status },
+      ),
+    };
+  }
+  return { supabase, user, organization: active.organization };
 }
 
 type RouteContext = { params: Promise<{ collection: string }> };
@@ -113,17 +124,83 @@ export async function GET(_request: Request, { params }: RouteContext) {
   const auth = await getAuthenticatedClient();
   if ("response" in auth) return auth.response;
 
-  const { data, error } = await auth.supabase
+  const url = new URL(_request.url);
+  const limit = Number(url.searchParams.get("limit") ?? 50);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    return Response.json({ error: "Page size must be between 1 and 100." }, { status: 400 });
+  }
+  const cursorValue = url.searchParams.get("cursor");
+  let cursor: { created_at: string; id: string } | undefined;
+  if (cursorValue) {
+    if (cursorValue.length > 512) {
+      return Response.json({ error: "The page cursor is invalid. Refresh the list and try again." }, { status: 400 });
+    }
+    try {
+      const parsed = z.object({
+        created_at: z.string().datetime({ offset: true }),
+        id: z.string().uuid(),
+      }).safeParse(JSON.parse(Buffer.from(cursorValue, "base64url").toString("utf8")));
+      if (!parsed.success) throw new Error("Invalid cursor.");
+      cursor = parsed.data;
+    } catch {
+      return Response.json({ error: "The page cursor is invalid. Refresh the list and try again." }, { status: 400 });
+    }
+  }
+
+  const moduleConfig = crmModules[collection];
+  const status = url.searchParams.get("status");
+  if (status) {
+    const statusField = moduleConfig.fields.find((field) => field.key === "status" || field.key === "verification_status");
+    if (!statusField?.options?.some((option) => option === status)) {
+      return Response.json({ error: "The selected status is not valid for this collection." }, { status: 400 });
+    }
+  }
+
+  let query = auth.supabase
     .from(collection.replaceAll("-", "_"))
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(200);
+    .order("id", { ascending: false })
+    .limit(limit + 1)
+    .eq("organization_id", auth.organization.organizationId);
+  if (status) query = query.eq(moduleConfig.fields.some((field) => field.key === "status") ? "status" : "verification_status", status);
+
+  const search = url.searchParams.get("q")?.trim();
+  if (search && search.length > 120) {
+    return Response.json({ error: "Search terms must be 120 characters or fewer." }, { status: 400 });
+  }
+  if (search) query = query.textSearch("search_document", search, { config: "simple", type: "websearch" });
+
+  for (const facet of "facets" in moduleConfig ? moduleConfig.facets : []) {
+    const value = url.searchParams.get(`facet_${facet.key}`);
+    if (value) {
+      if (value.length > 120) return Response.json({ error: `The ${facet.label.toLowerCase()} filter is too long.` }, { status: 400 });
+      query = query.eq(facet.key, value);
+    }
+  }
+  if (cursor) {
+    query = query.or(`created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`);
+  }
+
+  const { data, error } = await query;
   if (error) {
     console.error(`Failed to read CRM collection "${collection}".`, error);
     return Response.json({ error: "Could not load CRM records." }, { status: 500 });
   }
 
-  return Response.json({ data });
+  const page = data ?? [];
+  const hasMore = page.length > limit;
+  const records = page.slice(0, limit).map((record) => {
+    const publicRecord = { ...record };
+    delete publicRecord.search_document;
+    return publicRecord;
+  });
+  const last = records.at(-1);
+  const nextCursor = hasMore && last && typeof last.created_at === "string" && typeof last.id === "string"
+    ? Buffer.from(JSON.stringify({ created_at: last.created_at, id: last.id })).toString("base64url")
+    : null;
+
+  return Response.json({ data: records, hasMore, nextCursor, limit });
 }
 
 export async function POST(request: Request, { params }: RouteContext) {
@@ -139,19 +216,40 @@ export async function POST(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Request body must be valid JSON." }, { status: 400 });
   }
 
-  const validation = schemas[collection.replaceAll("-", "_") as keyof typeof schemas].safeParse(input);
-  if (!validation.success) {
-    return Response.json({ error: "Please check the submitted fields.", details: validation.error.flatten() }, { status: 400 });
-  }
-
   const auth = await getAuthenticatedClient();
   if ("response" in auth) return auth.response;
 
+  const schema = schemas[collection.replaceAll("-", "_") as keyof typeof schemas];
+  const isBulk = typeof input === "object" && input !== null && "records" in input;
+  let inputs: unknown[];
+  if (isBulk) {
+    const batch = z.object({ records: z.array(z.unknown()).min(1).max(100) }).safeParse(input);
+    if (!batch.success) {
+      return Response.json({ error: "Import batches must contain between 1 and 100 records." }, { status: 400 });
+    }
+    inputs = batch.data.records;
+  } else {
+    inputs = [input];
+  }
+  const parsedRecords = inputs.map((record) => schema.safeParse(record));
+  const invalidIndex = parsedRecords.findIndex((result) => !result.success);
+  if (invalidIndex >= 0) {
+    const invalid = parsedRecords[invalidIndex];
+    return Response.json({
+      error: `Please check import row ${invalidIndex + 1}.`,
+      details: invalid?.success === false ? invalid.error.flatten() : undefined,
+      row: invalidIndex + 1,
+    }, { status: 400 });
+  }
+  const recordsToInsert = parsedRecords.flatMap((result) => result.success ? [result.data] : []);
   const { data, error } = await auth.supabase
     .from(collection.replaceAll("-", "_"))
-    .insert({ ...validation.data, user_id: auth.user.id })
-    .select()
-    .single();
+    .insert(recordsToInsert.map((record) => ({
+      ...record,
+      user_id: auth.user.id,
+      organization_id: auth.organization.organizationId,
+    })))
+    .select();
   if (error) {
     if (error.code === "23505") {
       return Response.json({ error: "A record with this email address or phone number already exists.", code: "DUPLICATE_RECORD" }, { status: 409 });
@@ -160,7 +258,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Could not save the CRM record." }, { status: 500 });
   }
 
-  return Response.json({ data }, { status: 201 });
+  return Response.json({ data: isBulk ? data : data?.[0] }, { status: 201 });
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
@@ -194,7 +292,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     .from(collection.replaceAll("-", "_"))
     .update(validation.data)
     .eq("id", parsedInput.data.id)
-    .eq("user_id", auth.user.id)
+    .eq("organization_id", auth.organization.organizationId)
     .select()
     .maybeSingle();
   if (error) {
@@ -221,12 +319,15 @@ export async function DELETE(request: Request, { params }: RouteContext) {
 
   const auth = await getAuthenticatedClient();
   if ("response" in auth) return auth.response;
+  if (auth.organization.role !== "owner" && auth.organization.role !== "admin") {
+    return Response.json({ error: "Only workspace owners and admins can delete CRM records." }, { status: 403 });
+  }
 
   const { error, count } = await auth.supabase
     .from(collection.replaceAll("-", "_"))
     .delete({ count: "exact" })
     .eq("id", id)
-    .eq("user_id", auth.user.id);
+    .eq("organization_id", auth.organization.organizationId);
   if (error) {
     console.error(`Failed to delete a CRM record from "${collection}".`, error);
     return Response.json({ error: "Could not delete the CRM record." }, { status: 500 });

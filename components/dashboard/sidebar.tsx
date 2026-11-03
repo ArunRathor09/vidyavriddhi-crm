@@ -79,12 +79,12 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         className={cn(
                           "group relative flex items-center gap-3 overflow-hidden rounded-xl border px-3 py-[9px] text-[11px] font-medium transition-all duration-200",
                           active
-                            ? "border-blue-100 bg-gradient-to-r from-blue-50 via-white to-orange-50/45 text-[#075fa3] shadow-[0_3px_12px_-8px_rgba(7,95,163,0.5)]"
+                            ? "border-teal-100 bg-gradient-to-r from-teal-50 via-white to-orange-50/55 text-[#08656c] shadow-[0_3px_12px_-8px_rgba(8,123,131,0.42)]"
                             : "border-transparent text-sidebar-foreground/75 hover:border-slate-200/80 hover:bg-slate-50 hover:text-foreground",
                         )}
                       >
                         {active && <span aria-hidden="true" className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-primary" />}
-                        <span className={cn("flex h-[27px] w-[27px] shrink-0 items-center justify-center rounded-lg transition-all", active ? "bg-white text-[#075fa3] shadow-sm" : "text-sidebar-foreground/55 group-hover:bg-white group-hover:text-[#075fa3]")}>
+                        <span className={cn("flex h-[27px] w-[27px] shrink-0 items-center justify-center rounded-lg transition-all", active ? "bg-white text-[#087b83] shadow-sm" : "text-sidebar-foreground/55 group-hover:bg-white group-hover:text-[#087b83]")}>
                           <item.icon className="h-[14px] w-[14px]" />
                         </span>
                         <span className="min-w-0 flex-1 truncate">{item.title}</span>
@@ -106,7 +106,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <button
           type="button"
           onClick={openCommandPalette}
-          className="group mb-2.5 flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border bg-white px-3 py-2.5 text-left shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50/50"
+          className="group mb-2.5 flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border bg-white px-3 py-2.5 text-left shadow-sm transition-all hover:border-teal-200 hover:bg-teal-50/60"
         >
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary"><Command className="h-3.5 w-3.5" /></span>
           <span className="min-w-0 flex-1">

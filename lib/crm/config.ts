@@ -6,6 +6,7 @@ export type FieldType =
   | "date"
   | "datetime-local"
   | "select"
+  | "checkbox"
   | "textarea"
   | "file";
 
@@ -27,7 +28,7 @@ export const crmModules = {
       "Capture enquiries, prioritise high-intent students, and keep every counselling conversation moving.",
     table: "leads",
     searchKeys: ["full_name", "phone", "email", "preferred_destination", "counselor_name"],
-    facets: [{ key: "source", label: "Source" }],
+    facets: [{ key: "priority", label: "Priority" }, { key: "source", label: "Source" }],
     columns: [
       { key: "full_name", label: "Student", primary: true },
       { key: "phone", label: "Phone" },
@@ -35,6 +36,7 @@ export const crmModules = {
       { key: "source", label: "Source" },
       { key: "counselor_name", label: "Counsellor" },
       { key: "status", label: "Pipeline" },
+      { key: "whatsapp_opt_in", label: "WhatsApp consent" },
       { key: "next_follow_up_date", label: "Next follow-up", type: "date" },
     ],
     fields: [
@@ -44,6 +46,7 @@ export const crmModules = {
       { key: "source", label: "Lead source", type: "select", options: ["Website", "Google", "Facebook", "Instagram", "Referral", "Walk-in", "Other"], required: true },
       { key: "status", label: "Pipeline stage", type: "select", options: ["New", "Contacted", "Interested", "Documents", "Applied", "Offer letter", "Admitted", "Payment complete"], required: true },
       { key: "priority", label: "Priority", type: "select", options: ["Hot", "Warm", "Cold"], required: true },
+      { key: "whatsapp_opt_in", label: "Student has opted in to WhatsApp messages", type: "checkbox" },
       { key: "counselor_name", label: "Assigned counsellor", type: "text", placeholder: "Team member name" },
       { key: "preferred_destination", label: "Preferred country / state", type: "text", placeholder: "e.g. Georgia or Karnataka" },
       { key: "budget", label: "Annual budget (₹)", type: "number" },

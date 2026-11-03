@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowDownToLine,
   ArrowUpRight,
+  CircleAlert,
+  Database,
   FileText,
   Filter,
   LoaderCircle,
+  MessageCircle,
   MoreHorizontal,
   Plus,
   Search,
@@ -27,7 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { crmModules, type CrmCollection, type CrmField, type CrmRecord } from "@/lib/crm/config";
 import { useCrmCollection } from "@/hooks/use-crm-collection";
-import { downloadCsv } from "@/lib/csv";
+import { downloadCsv, parseCsv } from "@/lib/csv";
 import { createClient } from "@/lib/supabase/client";
 
 const currency = new Intl.NumberFormat("en-IN", {
@@ -80,27 +83,45 @@ function statusClass(value: unknown) {
 export function ModuleWorkspace({
   collection,
   initialSearch = "",
+  initialStatus = "",
+  initialFacets = {},
 }: {
   collection: CrmCollection;
   initialSearch?: string;
+  initialStatus?: string;
+  initialFacets?: Record<string, string>;
 }) {
   const moduleConfig = crmModules[collection];
-  const { records, mode, error, reload, save, remove } = useCrmCollection(collection);
   const [search, setSearch] = useState(initialSearch);
-  const [statusFilter, setStatusFilter] = useState("All records");
-  const [sortBy, setSortBy] = useState("recent");
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
+  const statusField = moduleConfig.fields.find((field) => field.key === "status" || field.key === "verification_status");
+  const statuses: string[] = statusField?.options ? [...statusField.options] : [];
+  const [statusFilter, setStatusFilter] = useState(statuses.includes(initialStatus) ? initialStatus : "All records");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState<{ filename: string; records: Record<string, unknown>[] } | null>(null);
+  const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<CrmRecord | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedFacets, setSelectedFacets] = useState<Record<string, string>>({});
+  const [selectedFacets, setSelectedFacets] = useState<Record<string, string>>(initialFacets);
   const router = useRouter();
   const facets = "facets" in moduleConfig ? moduleConfig.facets : noFacets;
+  const queryFacets = useMemo(() => Object.fromEntries(
+    Object.entries(selectedFacets).filter(([, value]) => !value.startsWith("All ")),
+  ), [selectedFacets]);
+  const queryStatus = statusFilter === "All records" ? undefined : statusFilter;
+  const { records, mode, error, errorCode, reload, loadMore, hasMore, loadingMore, importRecords, save, remove } = useCrmCollection(collection, {
+    search: debouncedSearch.trim(),
+    status: queryStatus,
+    facets: queryFacets,
+  });
 
-  const statuses = useMemo(
-    () => Array.from(new Set(records.map((record) => String(record.status ?? record.verification_status ?? ""))).values()).filter(Boolean),
-    [records],
-  );
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedSearch(search), 250);
+    return () => window.clearTimeout(timeout);
+  }, [search]);
+
   const filteredRecords = useMemo(() => records.filter((record) => {
     const matchesSearch = moduleConfig.searchKeys.some((key) =>
       String(record[key] ?? "").toLowerCase().includes(search.trim().toLowerCase()),
@@ -112,18 +133,7 @@ export function ModuleWorkspace({
     });
     return matchesSearch && matchesFacets && (statusFilter === "All records" || recordStatus === statusFilter);
   }), [facets, moduleConfig.searchKeys, records, search, selectedFacets, statusFilter]);
-  const visibleRecords = useMemo(() => [...filteredRecords].sort((left, right) => {
-    if (sortBy === "name") {
-      const primaryKey = moduleConfig.columns.find((column) => "primary" in column && column.primary)?.key;
-      return String(left[primaryKey ?? "id"] ?? "").localeCompare(String(right[primaryKey ?? "id"] ?? ""));
-    }
-    if (sortBy === "status") {
-      return String(left.status ?? left.verification_status ?? "").localeCompare(String(right.status ?? right.verification_status ?? ""));
-    }
-    const leftDate = new Date(String(left.updated_at ?? left.created_at ?? 0)).getTime();
-    const rightDate = new Date(String(right.updated_at ?? right.created_at ?? 0)).getTime();
-    return (Number.isNaN(rightDate) ? 0 : rightDate) - (Number.isNaN(leftDate) ? 0 : leftDate);
-  }), [filteredRecords, moduleConfig.columns, sortBy]);
+  const visibleRecords = filteredRecords;
   const selectedVisibleRecords = visibleRecords.filter((record) => selectedIds.has(record.id));
   const allVisibleSelected = visibleRecords.length > 0 && selectedVisibleRecords.length === visibleRecords.length;
 
@@ -177,6 +187,32 @@ export function ModuleWorkspace({
     }
   }
 
+  async function sendWhatsAppTemplate(record: CrmRecord) {
+    if (record.whatsapp_opt_in !== true) {
+      toast.error("Record explicit student consent before sending a WhatsApp message.");
+      return;
+    }
+    if (!window.confirm(`Send the configured WhatsApp template to ${String(record.full_name ?? "this lead")}?`)) return;
+
+    try {
+      const response = await fetch("/api/integrations/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId: record.id, requestId: crypto.randomUUID() }),
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        const message = typeof payload === "object" && payload !== null && "error" in payload && typeof payload.error === "string"
+          ? payload.error
+          : "WhatsApp could not accept this message.";
+        throw new Error(message);
+      }
+      toast.success("WhatsApp template accepted by the provider.");
+    } catch (sendError) {
+      toast.error(sendError instanceof Error ? sendError.message : "WhatsApp could not accept this message.");
+    }
+  }
+
   async function submitForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
@@ -185,6 +221,10 @@ export function ModuleWorkspace({
     const values: Record<string, unknown> = {};
     for (const field of moduleConfig.fields) {
       if (field.type === "file") continue;
+      if (field.type === "checkbox") {
+        values[field.key] = formData.get(field.key) === "on";
+        continue;
+      }
       const value = String(formData.get(field.key) ?? "").trim();
       if (value === "") continue;
       if (field.type === "number") values[field.key] = Number(value);
@@ -211,7 +251,21 @@ export function ModuleWorkspace({
             const client = createClient();
             const { data: { user }, error: userError } = await client.auth.getUser();
             if (userError || !user) throw userError ?? new Error("Sign in before uploading student documents.");
-            uploadedPath = `${user.id}/${crypto.randomUUID()}-${fileEntry.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+            const workspaceResponse = await fetch("/api/workspaces", { cache: "no-store" });
+            const workspacePayload: unknown = await workspaceResponse.json();
+            if (
+              !workspaceResponse.ok
+              || typeof workspacePayload !== "object"
+              || workspacePayload === null
+              || !("active" in workspacePayload)
+              || typeof workspacePayload.active !== "object"
+              || workspacePayload.active === null
+              || !("id" in workspacePayload.active)
+              || typeof workspacePayload.active.id !== "string"
+            ) {
+              throw new Error("Could not resolve the active organization for document upload.");
+            }
+            uploadedPath = `${workspacePayload.active.id}/${user.id}/${crypto.randomUUID()}-${fileEntry.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
             const { error: uploadError } = await client.storage
               .from("student-documents")
               .upload(uploadedPath, fileEntry, { contentType: fileEntry.type, upsert: false });
@@ -260,7 +314,91 @@ export function ModuleWorkspace({
     const headings = moduleConfig.columns.map((column) => column.label);
     const rows = filteredRecords.map((record) => moduleConfig.columns.map((column) => record[column.key] ?? ""));
     downloadCsv(`nexora-${collection}-${new Date().toISOString().slice(0, 10)}.csv`, [headings, ...rows]);
-    toast.success("CSV export downloaded.");
+    toast.success("Currently loaded records exported to CSV.");
+  }
+
+  function downloadImportTemplate() {
+    const fields: CrmField[] = moduleConfig.fields.filter((field) => field.type !== "file");
+    downloadCsv(`${collection}-import-template.csv`, [fields.map((field) => field.key)]);
+  }
+
+  async function prepareImport(file: File) {
+    setImportPreview(null);
+    try {
+      if (!["leads", "students"].includes(collection)) {
+        throw new Error("CSV import is currently available for leads and students.");
+      }
+      if (file.size > 10 * 1024 * 1024) throw new Error("CSV files must be 10 MB or smaller.");
+      const rows = parseCsv((await file.text()).replace(/^\uFEFF/, ""));
+      const normalizeHeader = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+      const fields: CrmField[] = moduleConfig.fields.filter((field) => field.type !== "file");
+      const fieldByHeader = new Map<string, CrmField>();
+      for (const field of fields) {
+        fieldByHeader.set(normalizeHeader(field.key), field);
+        fieldByHeader.set(normalizeHeader(field.label), field);
+      }
+      const headerFields = rows[0].map((header) => fieldByHeader.get(normalizeHeader(header)));
+      const unknownHeaders = rows[0].filter((header, index) => !headerFields[index]);
+      if (unknownHeaders.length) throw new Error(`Unknown CSV column${unknownHeaders.length === 1 ? "" : "s"}: ${unknownHeaders.join(", ")}. Use the template field names.`);
+      const fieldKeys = new Set(headerFields.map((field) => field?.key));
+      const missingRequired = fields.filter((field) => field.required && !fieldKeys.has(field.key)).map((field) => field.label);
+      if (missingRequired.length) throw new Error(`Required column${missingRequired.length === 1 ? "" : "s"} missing: ${missingRequired.join(", ")}.`);
+
+      const dataRows = rows.slice(1);
+      if (dataRows.length > 10_000) throw new Error("A single CSV import is limited to 10,000 records. Split larger files into smaller uploads.");
+      const records = dataRows.map((values, index) => {
+        if (values.length !== headerFields.length) throw new Error(`CSV row ${index + 2} has a different number of values than the header.`);
+        const record: Record<string, unknown> = {};
+        headerFields.forEach((field, columnIndex) => {
+          if (!field) return;
+          const value = values[columnIndex].trim();
+          if (!value) {
+            if (field.required) throw new Error(`CSV row ${index + 2} is missing ${field.label.toLowerCase()}.`);
+            return;
+          }
+          if (field.type === "checkbox") {
+            const normalized = value.toLowerCase();
+            if (!["true", "false", "yes", "no", "1", "0"].includes(normalized)) {
+              throw new Error(`CSV row ${index + 2} has an invalid ${field.label.toLowerCase()} value.`);
+            }
+            record[field.key] = ["true", "yes", "1"].includes(normalized);
+          } else if (field.type === "number") {
+            const number = Number(value);
+            if (!Number.isFinite(number)) throw new Error(`CSV row ${index + 2} has an invalid ${field.label.toLowerCase()}.`);
+            record[field.key] = number;
+          } else if (field.type === "select") {
+            if (field.options && !field.options.includes(value)) throw new Error(`CSV row ${index + 2} has an invalid ${field.label.toLowerCase()} value: ${value}.`);
+            record[field.key] = value;
+          } else if (field.type === "email") {
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) throw new Error(`CSV row ${index + 2} has an invalid email address.`);
+            record[field.key] = value.toLowerCase();
+          } else {
+            record[field.key] = value;
+          }
+        });
+        return record;
+      });
+      if (!records.length) throw new Error("The CSV has a header but no data rows.");
+      setImportPreview({ filename: file.name, records });
+    } catch (importError) {
+      toast.error(importError instanceof Error ? importError.message : "Could not read this CSV file.");
+    }
+  }
+
+  async function runImport() {
+    if (!importPreview) return;
+    setImporting(true);
+    try {
+      const inserted = await importRecords(importPreview.records);
+      toast.success(`${inserted.toLocaleString()} ${moduleConfig.title.toLowerCase()} imported.`);
+      setImportPreview(null);
+      setImportDialogOpen(false);
+      setSelectedIds(new Set());
+    } catch (importError) {
+      toast.error(importError instanceof Error ? importError.message : "Could not import these records.");
+    } finally {
+      setImporting(false);
+    }
   }
 
   function exportSelectedCsv() {
@@ -284,32 +422,42 @@ export function ModuleWorkspace({
   ).length;
   const highlight = collection === "leads" ? records.filter((record) => record.priority === "Hot").length : openCount;
 
+  async function updateLeadStage(record: CrmRecord, nextStatus: string | null) {
+    if (collection !== "leads" || !nextStatus || nextStatus === record.status) return;
+    await save({ status: nextStatus }, record.id);
+  }
+
   return (
     <div className="mx-auto max-w-[1440px] space-y-6 md:space-y-7">
-      <header className="crm-page-heading flex flex-col justify-between gap-4 px-5 py-5 md:flex-row md:items-center md:px-7 md:py-6">
+      <header className="crm-page-heading crm-module-hero flex flex-col justify-between gap-4 px-5 py-5 md:flex-row md:items-center md:px-7 md:py-6">
         <div className="relative z-10">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[9px] font-bold tracking-[0.17em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-[#fe661d]" />{moduleConfig.eyebrow}</span>
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-bold tracking-[0.17em] text-teal-100"><span className="h-1.5 w-1.5 rounded-full bg-[#fe7048]" />{moduleConfig.eyebrow}</span>
             {mode === "demo" && (
-              <Badge variant="outline" className="h-5 border-amber-200 bg-amber-50 px-2 text-[10px] font-semibold text-amber-700">
+              <Badge variant="outline" className="h-5 border-amber-200/40 bg-amber-300/15 px-2 text-[10px] font-semibold text-amber-100">
                 DEMO MODE
               </Badge>
             )}
             {mode === "supabase" && (
-              <Badge variant="outline" className="h-5 border-emerald-200 bg-emerald-50 px-2 text-[10px] font-semibold text-emerald-700">
+              <Badge variant="outline" className="h-5 border-emerald-200/35 bg-emerald-300/15 px-2 text-[10px] font-semibold text-emerald-100">
                 SUPABASE LIVE
               </Badge>
             )}
           </div>
-          <h1 className="text-[26px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[32px]">{moduleConfig.title}</h1>
-          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-slate-500">{moduleConfig.description}</p>
+          <h1 className="text-[26px] font-semibold tracking-[-0.04em] text-white sm:text-[32px]">{moduleConfig.title}</h1>
+          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-slate-300">{moduleConfig.description}</p>
         </div>
         <div className="relative z-10 flex flex-wrap gap-2">
           <Button variant="outline" className="h-10 border-slate-200 bg-white/90 px-4 shadow-sm hover:border-blue-200 hover:bg-blue-50/50" onClick={exportCsv} disabled={filteredRecords.length === 0}>
             <ArrowDownToLine className="mr-2 h-4 w-4" />
-            Export
+            Export loaded
           </Button>
-          <Button className="h-10 rounded-xl bg-[#075fa3] px-4 shadow-[0_7px_16px_-10px_rgba(7,95,163,0.8)] hover:bg-[#064f88]" onClick={openCreate}>
+          {["leads", "students"].includes(collection) && (
+            <Button variant="outline" className="h-10 border-slate-200 bg-white/90 px-4 shadow-sm" onClick={() => setImportDialogOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />Import CSV
+            </Button>
+          )}
+          <Button className="h-10 rounded-xl bg-[#fe7048] px-4 text-white shadow-[0_7px_16px_-10px_rgba(254,112,72,0.8)] hover:bg-[#ed603a]" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" />
             Add {moduleConfig.singular}
           </Button>
@@ -327,12 +475,53 @@ export function ModuleWorkspace({
         </div>
       )}
 
-      {error && (
-        <div role="alert" className="flex flex-col gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-destructive">{error}</p>
+      {error && (errorCode === "ORGANIZATION_SCHEMA_NOT_READY" || errorCode === "ORGANIZATION_MEMBERSHIP_MISSING" ? (
+        <section role="alert" className="relative isolate overflow-hidden rounded-2xl border border-sky-200 bg-gradient-to-br from-white via-sky-50/80 to-orange-50/70 shadow-sm">
+          <div aria-hidden="true" className="absolute -right-14 -top-20 h-52 w-52 rounded-full bg-teal-200/35 blur-3xl" />
+          <div className="relative grid gap-5 p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:p-6">
+            <div className="flex gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-teal-200 bg-white text-teal-800 shadow-sm">
+                <Database className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="border-orange-200 bg-orange-50 text-[10px] font-semibold tracking-wide text-orange-800">SETUP REQUIRED</Badge>
+                  <span className="text-[11px] font-medium text-slate-500">Workspace access</span>
+                </div>
+                <h2 className="text-base font-semibold tracking-tight text-slate-900">
+                  {errorCode === "ORGANIZATION_SCHEMA_NOT_READY" ? "Finish connecting your Supabase workspace" : "No team workspace is linked to your account"}
+                </h2>
+                <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-600">{error}</p>
+                {errorCode === "ORGANIZATION_SCHEMA_NOT_READY" ? (
+                  <ol className="mt-3 grid gap-1.5 text-xs text-slate-600 sm:grid-cols-2">
+                    <li><span className="mr-2 font-semibold text-teal-800">01</span>Open your Supabase project&apos;s SQL Editor.</li>
+                    <li><span className="mr-2 font-semibold text-teal-800">02</span>Run the base schema, then the organization migration.</li>
+                  </ol>
+                ) : (
+                  <p className="mt-3 text-xs text-slate-600">Ask your workspace owner to invite this account, or have an administrator verify that the organization migration completed successfully.</p>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 md:justify-end">
+              {errorCode === "ORGANIZATION_SCHEMA_NOT_READY" && (
+                <Button asChild variant="outline" className="border-sky-200 bg-white/80">
+                  <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer">
+                    Supabase dashboard <ArrowUpRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              )}
+              <Button onClick={() => void reload()} className="bg-[#087b83] hover:bg-[#08656c]">
+                Retry connection
+              </Button>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <div role="alert" className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50/70 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-start gap-2 text-rose-800"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />{error}</p>
           <Button variant="outline" size="sm" onClick={() => void reload()}>Retry</Button>
         </div>
-      )}
+      ))}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card className="relative overflow-hidden rounded-2xl border-border/80">
@@ -341,7 +530,7 @@ export function ModuleWorkspace({
             <div>
               <p className="text-xs font-medium text-muted-foreground">Total {moduleConfig.title.toLowerCase()}</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight">{mode === "loading" ? "—" : records.length}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Records in your workspace</p>
+              <p className="mt-1 text-xs text-muted-foreground">{hasMore ? "Rows loaded; more are available" : "Rows matching the current filters"}</p>
             </div>
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <FileText className="h-5 w-5" />
@@ -349,7 +538,7 @@ export function ModuleWorkspace({
           </CardContent>
         </Card>
         <Card className="relative overflow-hidden rounded-2xl border-border/80">
-          <span className="absolute inset-x-5 top-0 h-[2px] rounded-b-full bg-[#fe661d]/80" />
+          <span className="absolute inset-x-5 top-0 h-[2px] rounded-b-full bg-[#fe7048]/80" />
           <CardContent className="flex items-center justify-between p-5">
             <div>
               <p className="text-xs font-medium text-muted-foreground">{collection === "leads" ? "Hot-priority leads" : "Needs attention"}</p>
@@ -377,13 +566,13 @@ export function ModuleWorkspace({
       </div>
 
       <Card className="overflow-hidden rounded-2xl border-border/80">
-        <div className="flex flex-col gap-4 border-b border-slate-200/80 bg-gradient-to-r from-slate-50/95 via-white to-blue-50/35 p-4 md:p-5">
+        <div className="flex flex-col gap-4 border-b border-slate-200/80 bg-gradient-to-r from-slate-50/95 via-white to-teal-50/45 p-4 md:p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-sm font-semibold">{moduleConfig.title} directory</h2>
                 <Badge variant="secondary" className="h-5 px-2 text-[10px] tabular-nums">{filteredRecords.length}</Badge>
-                <span className="text-xs text-muted-foreground">of {records.length} records</span>
+                <span className="text-xs text-muted-foreground">loaded in this view</span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">Search, refine and manage your {moduleConfig.title.toLowerCase()} in one place.</p>
             </div>
@@ -441,16 +630,6 @@ export function ModuleWorkspace({
                 </Select>
               );
             })}
-            <Select value={sortBy} onValueChange={(value) => value && setSortBy(value)}>
-              <SelectTrigger aria-label="Sort records" className="h-10 w-full bg-background lg:w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Recently updated</SelectItem>
-                <SelectItem value="name">Name A–Z</SelectItem>
-                <SelectItem value="status">Status A–Z</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
         <Table>
@@ -515,6 +694,20 @@ export function ModuleWorkspace({
                           </Avatar>
                           <span className="max-w-56 truncate text-[13px] font-medium">{displayValue(value, columnType)}</span>
                         </div>
+                      ) : column.key === "whatsapp_opt_in" ? (
+                        <Badge variant="outline" className={value === true ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500"}>{value === true ? "Opted in" : "No consent"}</Badge>
+                      ) : collection === "leads" && column.key === "status" && statuses.length > 0 ? (
+                        <Select value={String(value ?? "")} onValueChange={(nextStatus) => void updateLeadStage(record, nextStatus)}>
+                          <SelectTrigger
+                            aria-label={`Update ${String(record.full_name ?? "lead")} pipeline stage`}
+                            className={`h-7 w-[142px] rounded-full px-2.5 text-[10px] font-semibold ${statusClass(value)}`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {statuses.map((status) => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       ) : column.key === "status" || column.key === "verification_status" || column.key === "priority" ? (
                         <Badge variant="outline" className={`whitespace-nowrap px-2.5 py-1 text-[10px] font-semibold ${statusClass(value)}`}>{displayValue(value)}</Badge>
                       ) : (
@@ -525,6 +718,18 @@ export function ModuleWorkspace({
                 })}
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                    {collection === "leads" && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Send WhatsApp template to ${String(record.full_name ?? "lead")}`}
+                        title={record.whatsapp_opt_in === true ? "Send approved WhatsApp template" : "Student WhatsApp consent is required"}
+                        disabled={record.whatsapp_opt_in !== true}
+                        onClick={() => void sendWhatsAppTemplate(record)}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
+                    )}
                     {collection === "documents" && (
                       <Button variant="ghost" size="icon-sm" aria-label="Preview document" onClick={() => void downloadDocument(record)}>
                         <ArrowDownToLine className="h-4 w-4" />
@@ -542,7 +747,66 @@ export function ModuleWorkspace({
             ))}
           </TableBody>
         </Table>
+        {hasMore && (
+          <div className="flex flex-col items-center gap-2 border-t px-4 py-4 sm:flex-row sm:justify-between">
+            <p className="text-xs text-muted-foreground">Showing {records.length.toLocaleString()} rows. Results are loaded in indexed pages.</p>
+            <Button variant="outline" size="sm" onClick={() => void loadMore()} disabled={loadingMore}>
+              {loadingMore && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+              Load more
+            </Button>
+          </div>
+        )}
       </Card>
+
+      <Dialog open={importDialogOpen} onOpenChange={(open) => {
+        setImportDialogOpen(open);
+        if (!open) setImportPreview(null);
+      }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <div className="mb-1 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Upload className="h-5 w-5" /></div>
+            <DialogTitle>Import {moduleConfig.title.toLowerCase()} from CSV</DialogTitle>
+            <DialogDescription>Validated uploads are inserted in small batches. Imports support up to 10,000 rows per CSV.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/20 p-4">
+              <div>
+                <p className="text-sm font-medium">Use the CRM field names as CSV headers</p>
+                <p className="mt-1 text-xs text-muted-foreground">CSV only. Save Excel workbooks as CSV before uploading.</p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={downloadImportTemplate}>
+                <ArrowDownToLine className="mr-1.5 h-3.5 w-3.5" />Download template
+              </Button>
+            </div>
+            <Input
+              type="file"
+              accept=".csv,text/csv"
+              disabled={importing}
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                if (file) void prepareImport(file);
+                event.currentTarget.value = "";
+              }}
+            />
+            {importPreview && (
+              <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-emerald-900">{importPreview.records.length.toLocaleString()} rows ready</p>
+                  <Badge variant="outline" className="max-w-full truncate border-emerald-300 bg-white text-emerald-800">{importPreview.filename}</Badge>
+                </div>
+                <p className="text-xs text-emerald-800">First record preview: {Object.entries(importPreview.records[0] ?? {}).map(([key, value]) => `${key}: ${String(value)}`).join(" · ")}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button type="button" variant="outline" disabled={importing} onClick={() => setImportDialogOpen(false)}>Cancel</Button>
+            <Button type="button" disabled={!importPreview || importing || mode === "loading"} onClick={() => void runImport()}>
+              {importing && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+              {importing ? "Importing…" : "Import records"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
@@ -558,7 +822,7 @@ export function ModuleWorkspace({
           <form key={editing?.id ?? "new-record"} onSubmit={(event) => void submitForm(event)} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               {moduleConfig.fields.map((field) => (
-                <FormField key={field.key} field={field} value={editing?.[field.key]} wide={field.type === "textarea" || field.type === "file"} />
+                <FormField key={field.key} field={field} value={editing?.[field.key]} wide={field.type === "textarea" || field.type === "file" || field.type === "checkbox"} />
               ))}
             </div>
             {collection === "documents" && mode === "demo" && (
@@ -595,6 +859,11 @@ function FormField({ field, value, wide }: { field: CrmField; value?: unknown; w
             {field.options?.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
           </SelectContent>
         </Select>
+      ) : field.type === "checkbox" ? (
+        <label htmlFor={id} className="flex min-h-10 items-center gap-2 rounded-lg border border-input px-3 text-xs text-muted-foreground">
+          <input id={id} name={field.key} type="checkbox" defaultChecked={value === true} className="h-4 w-4 accent-primary" />
+          Record explicit student consent before enabling WhatsApp outreach.
+        </label>
       ) : field.type === "textarea" ? (
         <textarea
           id={id}

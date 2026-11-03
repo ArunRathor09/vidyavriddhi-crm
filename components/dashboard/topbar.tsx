@@ -17,10 +17,14 @@ import { createClient } from "@/lib/supabase/client";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { navGroups } from "@/lib/constants/nav";
 
+type Workspace = { id: string; name: string; role: "owner" | "admin" | "member" };
+
 export function Topbar() {
   const [open, setOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const currentArea = navGroups
@@ -34,6 +38,44 @@ export function Topbar() {
     }
     window.addEventListener("crm:open-command-palette", handleOpenCommandPalette);
     return () => window.removeEventListener("crm:open-command-palette", handleOpenCommandPalette);
+  }, []);
+
+  useEffect(() => {
+    if (!getSupabaseConfig()) return;
+    let active = true;
+    void fetch("/api/workspaces", { cache: "no-store" }).then(async (response) => {
+      const payload: unknown = await response.json();
+      if (typeof payload !== "object" || payload === null) {
+        throw new Error("The workspace service returned an invalid response.");
+      }
+      if (!response.ok) {
+        const message = "error" in payload && typeof payload.error === "string"
+          ? payload.error
+          : "Could not load organization workspaces.";
+        throw new Error(message);
+      }
+      if (!("data" in payload) || !Array.isArray(payload.data) || !("active" in payload)) {
+        throw new Error("Could not load organization workspaces.");
+      }
+      const workspacesData = payload.data.filter((workspace): workspace is Workspace =>
+        typeof workspace === "object"
+        && workspace !== null
+        && "id" in workspace && typeof workspace.id === "string"
+        && "name" in workspace && typeof workspace.name === "string"
+        && "role" in workspace && ["owner", "admin", "member"].includes(String(workspace.role)),
+      );
+      const current = workspacesData.find((workspace) =>
+        typeof payload.active === "object" && payload.active !== null && "id" in payload.active && payload.active.id === workspace.id,
+      );
+      if (!current) throw new Error("The active organization is not available.");
+      if (active) {
+        setWorkspaces(workspacesData);
+        setActiveWorkspace(current);
+      }
+    }).catch((error: unknown) => {
+      if (active) toast.error(error instanceof Error ? error.message : "Could not load organization workspaces.");
+    });
+    return () => { active = false; };
   }, []);
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
@@ -53,6 +95,23 @@ export function Topbar() {
     }
     router.push("/login");
     router.refresh();
+  }
+
+  async function switchWorkspace(organizationId: string) {
+    const response = await fetch("/api/workspaces", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ organizationId }),
+    });
+    const payload: unknown = await response.json();
+    if (!response.ok) {
+      const message = typeof payload === "object" && payload !== null && "error" in payload && typeof payload.error === "string"
+        ? payload.error
+        : "Could not switch workspaces.";
+      toast.error(message);
+      return;
+    }
+    window.location.reload();
   }
 
   return (
@@ -123,14 +182,25 @@ export function Topbar() {
               <Avatar className="h-8 w-8 rounded-xl">
                 <AvatarFallback className="rounded-xl bg-gradient-to-br from-blue-50 to-orange-50 text-xs font-bold text-primary ring-1 ring-blue-100">VV</AvatarFallback>
               </Avatar>
-              <span className="hidden text-xs font-medium md:inline">Workspace</span>
+              <span className="hidden max-w-40 truncate text-xs font-medium md:inline">{activeWorkspace?.name ?? "Workspace"}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuLabel>
-              <p className="text-xs font-semibold">Vidyavriddhi workspace</p>
-              <p className="mt-1 text-[11px] font-normal text-muted-foreground">{pathname.split("/").filter(Boolean).at(-1)?.replaceAll("-", " ") ?? "Admissions CRM"}</p>
+              <p className="truncate text-xs font-semibold">{activeWorkspace?.name ?? "Vidyavriddhi workspace"}</p>
+              <p className="mt-1 text-[11px] font-normal capitalize text-muted-foreground">{activeWorkspace?.role ?? "Workspace"} · {pathname.split("/").filter(Boolean).at(-1)?.replaceAll("-", " ") ?? "Admissions CRM"}</p>
             </DropdownMenuLabel>
+            {workspaces.length > 1 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">Switch organization</DropdownMenuLabel>
+                {workspaces.map((workspace) => (
+                  <DropdownMenuItem key={workspace.id} disabled={workspace.id === activeWorkspace?.id} onClick={() => void switchWorkspace(workspace.id)}>
+                    {workspace.name}
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild><Link href="/students"><UserRound className="mr-2 h-4 w-4" />Students</Link></DropdownMenuItem>
             <DropdownMenuItem asChild><Link href="/settings"><Settings className="mr-2 h-4 w-4" />Workspace settings</Link></DropdownMenuItem>
