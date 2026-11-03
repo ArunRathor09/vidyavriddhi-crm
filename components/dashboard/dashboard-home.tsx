@@ -64,20 +64,14 @@ export function DashboardHome() {
   const applications = useCrmCollection("applications");
   const payments = useCrmCollection("payments");
   const activities = useCrmCollection("activities");
-<<<<<<< HEAD
   const documents = useCrmCollection("documents");
-  const modules = [leads, students, followUps, applications, payments, activities, documents];
-  const loading = modules.some((module) => module.mode === "loading");
-  const errors = modules.map((module) => module.error).filter((message): message is string => Boolean(message));
-=======
   const overview = useCrmOverview();
-  const modules = [leads, students, followUps, applications, payments, activities];
+  const modules = [leads, students, followUps, applications, payments, activities, documents];
   const loading = modules.some((module) => module.mode === "loading") || overview.loading;
   const errors = [...new Set(
     [...modules.map((module) => module.error), overview.error]
       .filter((message): message is string => Boolean(message)),
   )];
->>>>>>> develop
   const isDemo = modules.some((module) => module.mode === "demo");
   const now = new Date();
   const endOfToday = new Date(now);

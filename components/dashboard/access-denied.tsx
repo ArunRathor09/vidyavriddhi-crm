@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ShieldAlert, ArrowLeft, Crown, LayoutDashboard } from "lucide-react";
+import { ShieldAlert, Crown, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/auth-context";
 import { MODULE_CATALOG, type ModuleKey } from "@/lib/auth/roles";

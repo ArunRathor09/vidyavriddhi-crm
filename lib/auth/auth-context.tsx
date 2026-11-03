@@ -201,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadStoredUsers, saveStoredUsers]);
 
   useEffect(() => {
-    void loadUser();
+    void Promise.resolve().then(loadUser);
   }, [loadUser]);
 
   const canAccess = useCallback(

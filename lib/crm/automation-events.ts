@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 type RecordAutomationInput = {
   supabase: SupabaseClient;
   userId: string;
+  organizationId: string;
   collection: string;
   record: Record<string, unknown>;
   previous?: Record<string, unknown> | null;
@@ -36,7 +37,7 @@ async function hasOpenFollowUp(input: RecordAutomationInput, contactName: string
   let query = input.supabase
     .from("follow_ups")
     .select("id")
-    .eq("user_id", input.userId)
+    .eq("organization_id", input.organizationId)
     .eq("contact_name", contactName)
     .in("status", ["Open", "Snoozed"])
     .limit(1);
@@ -61,6 +62,7 @@ async function createFollowUp(
 ) {
   const { error } = await input.supabase.from("follow_ups").insert({
     user_id: input.userId,
+    organization_id: input.organizationId,
     title: followUp.title,
     contact_name: followUp.contactName,
     channel: followUp.channel,
@@ -76,7 +78,7 @@ async function completeFollowUp(input: RecordAutomationInput, title: string) {
   const { error } = await input.supabase
     .from("follow_ups")
     .update({ status: "Completed" })
-    .eq("user_id", input.userId)
+    .eq("organization_id", input.organizationId)
     .eq("title", title)
     .in("status", ["Open", "Snoozed"]);
   if (error) throw error;
@@ -195,7 +197,7 @@ async function automateFollowUp(input: RecordAutomationInput) {
   const { data, error } = await input.supabase
     .from("leads")
     .update({ status: "Contacted" })
-    .eq("user_id", input.userId)
+    .eq("organization_id", input.organizationId)
     .eq("full_name", contact)
     .eq("status", "New")
     .select("id");

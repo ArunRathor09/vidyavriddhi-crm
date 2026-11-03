@@ -1,11 +1,7 @@
 import { z } from "zod";
-<<<<<<< HEAD
-import { isCrmCollection } from "@/lib/crm/config";
-import { runRecordAutomation } from "@/lib/crm/automation-events";
-=======
 import { crmModules, isCrmCollection } from "@/lib/crm/config";
+import { runRecordAutomation } from "@/lib/crm/automation-events";
 import { getActiveOrganization } from "@/lib/crm/server-organization";
->>>>>>> develop
 import { createClient } from "@/lib/supabase/server";
 
 const schemas = {
@@ -263,18 +259,20 @@ export async function POST(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Could not save the CRM record." }, { status: 500 });
   }
 
-<<<<<<< HEAD
-  const automation = await runRecordAutomation({
-    supabase: auth.supabase,
-    userId: auth.user.id,
-    collection,
-    record: data as Record<string, unknown>,
-  });
+  const automationMessages: string[] = [];
+  for (const record of data ?? []) {
+    const message = await runRecordAutomation({
+      supabase: auth.supabase,
+      userId: auth.user.id,
+      organizationId: auth.organization.organizationId,
+      collection,
+      record,
+    });
+    if (message) automationMessages.push(message);
+  }
+  const automation = automationMessages.length > 0 ? automationMessages.join(" ") : null;
 
-  return Response.json({ data, automation }, { status: 201 });
-=======
-  return Response.json({ data: isBulk ? data : data?.[0] }, { status: 201 });
->>>>>>> develop
+  return Response.json({ data: isBulk ? data : data?.[0], automation }, { status: 201 });
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
@@ -310,7 +308,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     .from(table)
     .select("*")
     .eq("id", parsedInput.data.id)
-    .eq("user_id", auth.user.id)
+    .eq("organization_id", auth.organization.organizationId)
     .maybeSingle();
   if (existingError) {
     console.error(`Failed to read the existing CRM record in "${collection}".`, existingError);
@@ -337,6 +335,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const automation = await runRecordAutomation({
     supabase: auth.supabase,
     userId: auth.user.id,
+    organizationId: auth.organization.organizationId,
     collection,
     record: data as Record<string, unknown>,
     previous: existingRecord as Record<string, unknown>,

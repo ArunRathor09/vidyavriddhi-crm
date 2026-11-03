@@ -10,13 +10,8 @@ import {
   Check,
   Search,
   Sparkles,
-  ArrowRight,
-  ShieldCheck,
   CheckCircle2,
-  AlertCircle,
   Eye,
-  KeyRound,
-  UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth, type AuthUser } from "@/lib/auth/auth-context";
@@ -26,7 +21,6 @@ import {
   MODULE_GROUPS,
   type ModuleKey,
   type UserRole,
-  isSuperAdmin,
 } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

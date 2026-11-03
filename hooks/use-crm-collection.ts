@@ -11,12 +11,9 @@ type CollectionResponse = {
   data?: CrmRecord | CrmRecord[];
   error?: string;
   code?: string;
-<<<<<<< HEAD
   automation?: string | null;
-=======
   hasMore?: boolean;
   nextCursor?: string | null;
->>>>>>> develop
 };
 
 export type CollectionQuery = {
@@ -215,12 +212,8 @@ export function useCrmCollection(collection: CrmCollection, query: CollectionQue
     setRecords((current) => id
       ? current.map((record) => record.id === id ? savedRecord : record)
       : [savedRecord, ...current]);
-<<<<<<< HEAD
-
-    return payload.automation ?? null;
-  }, [collection, mode, records]);
-=======
     if (queryKey !== "{}") await load();
+    return payload.automation ?? null;
   }, [collection, currentMode, load, queryKey, records]);
 
   const importRecords = useCallback(async (inputs: Record<string, unknown>[]) => {
@@ -259,7 +252,6 @@ export function useCrmCollection(collection: CrmCollection, query: CollectionQue
     await load();
     return inserted;
   }, [collection, currentMode, load, records]);
->>>>>>> develop
 
   const remove = useCallback(async (id: string) => {
     setError(null);

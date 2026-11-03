@@ -5,34 +5,25 @@ The CRM uses Supabase Auth, its PostgreSQL database through the Supabase Data AP
 ## Connect a project
 
 1. Open **SQL Editor** in the Supabase project whose URL is configured in `.env`.
-<<<<<<< HEAD
-2. Open [`schema.sql`](./schema.sql), copy its complete contents, paste them into a new SQL Editor query, and run it. This creates the eight CRM tables, indexes, per-user RLS policies, timestamp triggers, and private `student-documents` bucket.
-3. Open [`automation.sql`](./automation.sql) and run it too. This installs the daily CRM automation job (see [Scheduled automation](#scheduled-automation)).
-=======
 2. Open [`schema.sql`](./schema.sql), copy its complete contents, paste them into a new SQL Editor query, and run it. This creates the eight CRM tables, indexes, initial RLS policies, timestamp triggers, and private `student-documents` bucket.
 3. Apply [`20261023000000_multi_tenant_crm.sql`](./migrations/20261023000000_multi_tenant_crm.sql) in the SQL Editor. This data-preserving migration creates organizations and invitations, backfills each existing account and its records into an organization, installs organization-scoped RLS and Storage policies, and adds server-side search and analytics indexes.
->>>>>>> develop
-4. In **Project Settings → API**, ensure the matching Project URL and publishable key are configured in `.env.local`:
+4. Open [`automation.sql`](./automation.sql) and run it too. This installs the daily CRM automation job (see [Scheduled automation](#scheduled-automation)).
+5. In **Project Settings → API**, ensure the matching Project URL and publishable key are configured in `.env.local`:
 
    ```dotenv
    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
    ```
 
-<<<<<<< HEAD
-5. Restart the Next.js server, open `/login`, and create an account. If email confirmation is enabled in Supabase Auth, confirm the message before signing in.
-6. Open `/settings`. The connection should report active after the CRM tables are created and the signed-in account can read them.
-=======
-5. To enable team invitations, configure the Supabase service-role key only on the server:
+6. To enable team invitations, configure the Supabase service-role key only on the server:
 
    ```dotenv
    SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
    ```
 
    Do not prefix this variable with `NEXT_PUBLIC_`. Configure Supabase Auth email delivery before sending invitations.
-6. Restart the Next.js server, open `/login`, and create an account. New accounts receive a private organization; invited accounts join the inviting organization. If email confirmation is enabled in Supabase Auth, confirm the message before signing in.
-7. Open `/settings`. The connection should report active after the schema and migration are applied and the signed-in account can read its workspace.
->>>>>>> develop
+7. Restart the Next.js server, open `/login`, and create an account. New accounts receive a private organization; invited accounts join the inviting organization. If email confirmation is enabled in Supabase Auth, confirm the message before signing in.
+8. Open `/settings`. The connection should report active after the schema and migration are applied and the signed-in account can read its workspace.
 
 Do not put a Supabase secret/service-role key in the browser, a `NEXT_PUBLIC_` variable, or this file. Never commit `.env.local`.
 

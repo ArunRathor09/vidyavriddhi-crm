@@ -2,13 +2,13 @@
 
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
-import { hrefToModuleKey, type ModuleKey } from "@/lib/auth/roles";
+import { hrefToModuleKey } from "@/lib/auth/roles";
 import { AccessDenied } from "@/components/dashboard/access-denied";
 import { Loader2 } from "lucide-react";
 
 export function DashboardRouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, loading, canAccess, isSuperAdmin } = useAuth();
+  const { loading, canAccess, isSuperAdmin } = useAuth();
 
   if (loading) {
     return (
