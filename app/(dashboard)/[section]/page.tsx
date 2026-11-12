@@ -3,6 +3,7 @@ import { ModuleWorkspace } from "@/components/dashboard/module-workspace";
 import { PipelineWorkspace } from "@/components/dashboard/pipeline-workspace";
 import { ReportsWorkspace } from "@/components/dashboard/reports-workspace";
 import { SettingsWorkspace } from "@/components/dashboard/settings-workspace";
+import { AutoLeadsWorkspace } from "@/components/dashboard/auto-leads-workspace";
 import { isCrmCollection } from "@/lib/crm/config";
 
 export default async function WorkspacePage({
@@ -16,6 +17,7 @@ export default async function WorkspacePage({
 
   if (section === "reports") return <ReportsWorkspace />;
   if (section === "settings") return <SettingsWorkspace />;
+  if (section === "auto-leads") return <AutoLeadsWorkspace />;
   if (section === "pipeline") return <PipelineWorkspace />;
   if (!isCrmCollection(section)) notFound();
 

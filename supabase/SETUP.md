@@ -7,23 +7,24 @@ The CRM uses Supabase Auth, its PostgreSQL database through the Supabase Data AP
 1. Open **SQL Editor** in the Supabase project whose URL is configured in `.env`.
 2. Open [`schema.sql`](./schema.sql), copy its complete contents, paste them into a new SQL Editor query, and run it. This creates the eight CRM tables, indexes, initial RLS policies, timestamp triggers, and private `student-documents` bucket.
 3. Apply [`20261023000000_multi_tenant_crm.sql`](./migrations/20261023000000_multi_tenant_crm.sql) in the SQL Editor. This data-preserving migration creates organizations and invitations, backfills each existing account and its records into an organization, installs organization-scoped RLS and Storage policies, and adds server-side search and analytics indexes.
-4. Open [`automation.sql`](./automation.sql) and run it too. This installs the daily CRM automation job (see [Scheduled automation](#scheduled-automation)).
-5. In **Project Settings → API**, ensure the matching Project URL and publishable key are configured in `.env.local`:
+4. Apply [`20261112000000_auto_leads_webhooks.sql`](./migrations/20261112000000_auto_leads_webhooks.sql). This enables secure Auto Leads sources, token-authenticated upserts, and automatic follow-ups for newly captured and newly Hot leads.
+5. Open [`automation.sql`](./automation.sql) and run it too. This installs the daily CRM automation job (see [Scheduled automation](#scheduled-automation)).
+6. In **Project Settings → API**, ensure the matching Project URL and publishable key are configured in `.env.local`:
 
    ```dotenv
    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
    ```
 
-6. To enable team invitations, configure the Supabase service-role key only on the server:
+7. To enable team invitations, configure the Supabase service-role key only on the server:
 
    ```dotenv
    SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
    ```
 
    Do not prefix this variable with `NEXT_PUBLIC_`. Configure Supabase Auth email delivery before sending invitations.
-7. Restart the Next.js server, open `/login`, and create an account. New accounts receive a private organization; invited accounts join the inviting organization. If email confirmation is enabled in Supabase Auth, confirm the message before signing in.
-8. Open `/settings`. The connection should report active after the schema and migration are applied and the signed-in account can read its workspace.
+8. Restart the Next.js server, open `/login`, and create an account. New accounts receive a private organization; invited accounts join the inviting organization. If email confirmation is enabled in Supabase Auth, confirm the message before signing in.
+9. Open `/settings`. The connection should report active after the schema and migrations are applied and the signed-in account can read its workspace.
 
 Do not put a Supabase secret/service-role key in the browser, a `NEXT_PUBLIC_` variable, or this file. Never commit `.env.local`.
 
@@ -57,6 +58,22 @@ Store phone numbers with the country calling code (for example, `+919876543210`)
 * To change the schedule, edit the cron expression in `automation.sql` and re-run the file.
 
 The app also runs event automation immediately through `lib/crm/automation-events.ts`: saving a new lead, a fee due soon, or a pending document creates the matching follow-up right away, and marking a fee `Paid` completes its reminder task.
+
+## Auto Leads webhooks
+
+Open **Auto Leads** from the CRM sidebar and create one integration source per spreadsheet or external system. Copy its API key when it is created; the full key is shown only once, and only its SHA-256 hash is stored. Workspace owners and admins can revoke an integration at any time.
+
+The endpoint accepts a single lead object or `{ "leads": [...] }` with at most 100 records:
+
+```http
+POST /api/auto-leads
+Authorization: Bearer nxl_your_source_key
+Content-Type: application/json
+```
+
+Required fields are `full_name` and `phone`. Supported optional fields are `email`, `source`, `status`, `priority`, `whatsapp_opt_in`, `counselor_name`, `preferred_destination`, `budget`, and `next_follow_up_date`. Leads are upserted by phone within the workspace; a matching phone updates the existing record. A new lead or a transition to Hot automatically creates a follow-up. Duplicate email addresses that belong to a different phone are rejected rather than silently merged.
+
+For Google Sheets, put the API field names in the first row, paste the generated Apps Script template from Auto Leads, replace the key placeholder, and run `setupAutoLeadsTrigger` once to authorize an installable edit trigger. Subsequent sheet edits push the row to the CRM. Keep the key private: anyone with it can write leads into that workspace.
 
 ## Local demo mode
 

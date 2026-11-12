@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { CheckCircle2, Circle, LoaderCircle, RefreshCw, Sparkles, TriangleAlert, Zap } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, Circle, LoaderCircle, RefreshCw, Sparkles, TriangleAlert, Zap } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -235,6 +236,9 @@ export function AutomationCenter({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 self-start">
+          <Button asChild variant="ghost" size="sm" className="h-8 text-xs text-primary">
+            <Link href="/auto-leads">Auto Leads <ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Link>
+          </Button>
           <button
             type="button"
             aria-pressed={autoRun}

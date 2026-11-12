@@ -12,6 +12,7 @@ export type UserRole = "super_admin" | "admin";
 export const ALL_MODULES = [
   "dashboard",
   "leads",
+  "auto-leads",
   "pipeline",
   "students",
   "follow-ups",
@@ -45,6 +46,12 @@ export const MODULE_CATALOG: Record<ModuleKey, ModuleInfo> = {
     key: "leads",
     label: "Leads",
     description: "Capture enquiries & prioritise high-intent students",
+    category: "Student CRM",
+  },
+  "auto-leads": {
+    key: "auto-leads",
+    label: "Auto Leads",
+    description: "Live spreadsheet and webhook lead ingestion",
     category: "Student CRM",
   },
   pipeline: {
@@ -116,7 +123,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = Object.fromEntries(
 /** Module groups that match the sidebar sections. */
 export const MODULE_GROUPS: { label: string; modules: ModuleKey[] }[] = [
   { label: "Workspace", modules: ["dashboard"] },
-  { label: "Student CRM", modules: ["leads", "pipeline", "students", "follow-ups"] },
+  { label: "Student CRM", modules: ["leads", "auto-leads", "pipeline", "students", "follow-ups"] },
   { label: "Admissions", modules: ["colleges", "applications", "documents", "payments"] },
   { label: "Insights", modules: ["activities", "reports"] },
   { label: "System", modules: ["settings"] },

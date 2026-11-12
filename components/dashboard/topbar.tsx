@@ -46,6 +46,7 @@ export function Topbar() {
   const [search, setSearch] = useState("");
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -126,15 +127,19 @@ export function Topbar() {
   }
 
   async function signOut() {
-    if (getSupabaseConfig()) {
-      const { error } = await createClient().auth.signOut();
-      if (error) {
-        toast.error(error.message);
-        return;
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      if (getSupabaseConfig()) {
+        const { error } = await createClient().auth.signOut();
+        if (error) throw error;
       }
+      toast.success("You have been signed out.");
+      window.location.replace("/login");
+    } catch (signOutError) {
+      toast.error(signOutError instanceof Error ? signOutError.message : "Could not sign out. Please try again.");
+      setSigningOut(false);
     }
-    router.push("/login");
-    router.refresh();
   }
 
   async function switchWorkspace(organizationId: string) {
@@ -275,7 +280,7 @@ export function Topbar() {
         {/* Profile & Account Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2 px-2">
+            <Button variant="ghost" className="gap-2 px-2" aria-label="Open profile and account menu">
               <Avatar className="h-8 w-8 rounded-xl">
                 <AvatarFallback
                   className={`rounded-xl text-xs font-bold ring-1 ${
@@ -316,6 +321,16 @@ export function Topbar() {
             </DropdownMenuLabel>
 
             <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => void signOut()}
+              disabled={signingOut}
+              className="font-medium text-rose-600 focus:bg-rose-50 focus:text-rose-700"
+            >
+              {signingOut
+                ? <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-rose-500 border-r-transparent" />
+                : <LogOut className="mr-2 h-4 w-4" />}
+              {signingOut ? "Signing out…" : "Log out"}
+            </DropdownMenuItem>
 
             {/* Super Admin User Management */}
             {isSuperAdmin && (
@@ -391,11 +406,6 @@ export function Topbar() {
                 <Settings className="mr-2 h-4 w-4" />
                 Workspace settings
               </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => void signOut()} className="text-rose-600 focus:bg-rose-50">
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

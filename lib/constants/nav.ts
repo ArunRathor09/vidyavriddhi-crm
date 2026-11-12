@@ -7,6 +7,7 @@ import {
   FileStack,
   Landmark,
   Target,
+  Webhook,
   TrendingUp,
   Workflow,
   Settings,
@@ -26,6 +27,7 @@ export const navGroups: NavGroup[] = [
     label: "Student CRM",
     items: [
       { title: "Leads", href: "/leads", icon: Target, moduleKey: "leads" },
+      { title: "Auto Leads", href: "/auto-leads", icon: Webhook, moduleKey: "auto-leads" },
       { title: "Pipeline", href: "/pipeline", icon: Workflow, moduleKey: "pipeline" },
       { title: "Students", href: "/students", icon: GraduationCap, moduleKey: "students" },
       { title: "Follow-ups", href: "/follow-ups", icon: BellRing, moduleKey: "follow-ups" },
