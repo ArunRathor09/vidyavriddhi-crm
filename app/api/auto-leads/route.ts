@@ -12,8 +12,8 @@ const leadSchema = z.object({
   whatsapp_opt_in: z.boolean().optional(),
   preferred_destination: z.string().trim().max(160).optional(),
   budget: z.preprocess(
-    (value) => typeof value === "string" && value.trim() === "" ? undefined : value,
-    z.coerce.number().nonnegative().max(9_999_999_999.99).optional(),
+    (value) => typeof value === "string" && value.trim() === "" ? null : value,
+    z.union([z.null(), z.coerce.number().nonnegative().max(9_999_999_999.99)]).optional(),
   ),
   next_follow_up_date: z.string().date().optional().or(z.literal("")),
 }).strict();

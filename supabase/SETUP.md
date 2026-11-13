@@ -73,7 +73,17 @@ Content-Type: application/json
 
 Required fields are `full_name` and `phone`. Supported optional fields are `email`, `source`, `status`, `priority`, `whatsapp_opt_in`, `counselor_name`, `preferred_destination`, `budget`, and `next_follow_up_date`. Leads are upserted by phone within the workspace; a matching phone updates the existing record. A new lead or a transition to Hot automatically creates a follow-up. Duplicate email addresses that belong to a different phone are rejected rather than silently merged.
 
-For Google Sheets, put the API field names in the first row, paste the generated Apps Script template from Auto Leads, replace the key placeholder, and run `setupAutoLeadsTrigger` once to authorize an installable edit trigger. Subsequent sheet edits push the row to the CRM. Keep the key private: anyone with it can write leads into that workspace.
+You can test the endpoint from a terminal by replacing the key placeholder with the one-time key created for that source:
+
+```bash
+API_KEY="YOUR_SOURCE_API_KEY"
+curl -X POST "https://your-crm-domain.com/api/auto-leads" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"full_name":"Aarav Sharma","phone":"+919876543210","email":"aarav@example.com","source":"Website","priority":"Warm"}'
+```
+
+For Google Sheets, put the API field names in the first row, paste the generated Apps Script template from Auto Leads, store the key in Apps Script **Project Settings → Script Properties** as `AUTO_LEADS_TOKEN`, and run `setupAutoLeadsTrigger` once to authorize installable edit and linked-form submission triggers. Subsequent human edits, multi-row pastes, and linked Google Form submissions push rows to the CRM; formula recalculations and changes made by another API do not fire Google edit triggers. Run `syncAllExistingRows` to reconcile those changes. Clearing a mapped optional field in the sheet clears that value in the CRM on its next sync. Keep the key private: anyone with it can write leads into that workspace.
 
 ## Local demo mode
 

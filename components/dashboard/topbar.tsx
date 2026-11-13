@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -258,22 +259,23 @@ export function Topbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel className="flex items-center justify-between">
-              Counsellor reminders <Badge variant="secondary">Today</Badge>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/follow-ups">
-                <Bell className="mr-2 h-4 w-4" />
-                View today&apos;s follow-ups
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/applications">
-                <GraduationCap className="mr-2 h-4 w-4" />
-                Check admission pipeline
-              </Link>
-            </DropdownMenuItem>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="flex items-center justify-between">
+                Counsellor reminders <Badge variant="secondary">Today</Badge>
+              </DropdownMenuLabel>
+              <DropdownMenuItem asChild>
+                <Link href="/follow-ups">
+                  <Bell className="mr-2 h-4 w-4" />
+                  View today&apos;s follow-ups
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/applications">
+                  <GraduationCap className="mr-2 h-4 w-4" />
+                  Check admission pipeline
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -298,27 +300,29 @@ export function Topbar() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel>
-              <p className="truncate text-xs font-semibold">{user?.fullName || "CRM User"}</p>
-              <p className="truncate text-[11px] font-normal text-muted-foreground">{user?.email}</p>
-              <div className="mt-1 flex items-center gap-1.5">
-                <span
-                  className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                    isSuperAdmin
-                      ? "bg-amber-100 text-amber-800"
-                      : "bg-sky-100 text-sky-800"
-                  }`}
-                >
-                  {isSuperAdmin ? <Crown className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-                  {roleLabel}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {isSuperAdmin
-                    ? "Full Access"
-                    : `${user?.allowedModules.length ?? 0} modules assigned`}
-                </span>
-              </div>
-            </DropdownMenuLabel>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>
+                <p className="truncate text-xs font-semibold">{user?.fullName || "CRM User"}</p>
+                <p className="truncate text-[11px] font-normal text-muted-foreground">{user?.email}</p>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                      isSuperAdmin
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-sky-100 text-sky-800"
+                    }`}
+                  >
+                    {isSuperAdmin ? <Crown className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
+                    {roleLabel}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {isSuperAdmin
+                      ? "Full Access"
+                      : `${user?.allowedModules.length ?? 0} modules assigned`}
+                  </span>
+                </div>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
 
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -346,51 +350,55 @@ export function Topbar() {
             {users.length > 1 && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Switch User (Preview RBAC)
-                </DropdownMenuLabel>
-                {users.map((u) => {
-                  const isCurrent = u.id === user?.id;
-                  return (
-                    <DropdownMenuItem
-                      key={u.id}
-                      disabled={isCurrent}
-                      onClick={() => {
-                        switchUser(u.id);
-                        toast.info(`Switched view to ${u.fullName || u.email}`);
-                      }}
-                      className="text-xs"
-                    >
-                      <UserCheck
-                        className={`mr-2 h-3.5 w-3.5 ${
-                          isCurrent ? "text-teal-600" : "text-muted-foreground"
-                        }`}
-                      />
-                      <span className="truncate">{u.fullName || u.email}</span>
-                      <span className="ml-auto text-[9px] font-semibold text-muted-foreground">
-                        {u.role === "super_admin" ? "SA" : "Admin"}
-                      </span>
-                    </DropdownMenuItem>
-                  );
-                })}
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    Switch User (Preview RBAC)
+                  </DropdownMenuLabel>
+                  {users.map((u) => {
+                    const isCurrent = u.id === user?.id;
+                    return (
+                      <DropdownMenuItem
+                        key={u.id}
+                        disabled={isCurrent}
+                        onClick={() => {
+                          switchUser(u.id);
+                          toast.info(`Switched view to ${u.fullName || u.email}`);
+                        }}
+                        className="text-xs"
+                      >
+                        <UserCheck
+                          className={`mr-2 h-3.5 w-3.5 ${
+                            isCurrent ? "text-teal-600" : "text-muted-foreground"
+                          }`}
+                        />
+                        <span className="truncate">{u.fullName || u.email}</span>
+                        <span className="ml-auto text-[9px] font-semibold text-muted-foreground">
+                          {u.role === "super_admin" ? "SA" : "Admin"}
+                        </span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuGroup>
               </>
             )}
 
             {workspaces.length > 1 && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Switch organization
-                </DropdownMenuLabel>
-                {workspaces.map((workspace) => (
-                  <DropdownMenuItem
-                    key={workspace.id}
-                    disabled={workspace.id === activeWorkspace?.id}
-                    onClick={() => void switchWorkspace(workspace.id)}
-                  >
-                    {workspace.name}
-                  </DropdownMenuItem>
-                ))}
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    Switch organization
+                  </DropdownMenuLabel>
+                  {workspaces.map((workspace) => (
+                    <DropdownMenuItem
+                      key={workspace.id}
+                      disabled={workspace.id === activeWorkspace?.id}
+                      onClick={() => void switchWorkspace(workspace.id)}
+                    >
+                      {workspace.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
               </>
             )}
 

@@ -41,14 +41,18 @@ const LEAD_FIELDS = new Set([
   "budget", "next_follow_up_date"
 ]);
 
-// Run once from the Apps Script editor and authorize the edit trigger.
+// Run once from the Apps Script editor and authorize the sheet triggers.
 function setupAutoLeadsTrigger() {
   ScriptApp.getProjectTriggers()
-    .filter(trigger => trigger.getHandlerFunction() === "syncLeadRowToCrm")
+    .filter(trigger => ["syncLeadRowToCrm", "syncSubmittedLeadToCrm"].includes(trigger.getHandlerFunction()))
     .forEach(trigger => ScriptApp.deleteTrigger(trigger));
   ScriptApp.newTrigger("syncLeadRowToCrm")
     .forSpreadsheet(SpreadsheetApp.getActive())
     .onEdit()
+    .create();
+  ScriptApp.newTrigger("syncSubmittedLeadToCrm")
+    .forSpreadsheet(SpreadsheetApp.getActive())
+    .onFormSubmit()
     .create();
 }
 
@@ -59,6 +63,12 @@ function syncLeadRowToCrm(e) {
   const lastRow = Math.min(sheet.getLastRow(), e.range.getLastRow());
   if (firstRow > lastRow) return;
   syncLeadRows_(sheet, firstRow, lastRow - firstRow + 1);
+}
+
+function syncSubmittedLeadToCrm(e) {
+  if (!e || !e.range) throw new Error("Run setupAutoLeadsTrigger once, then submit a response to the linked Google Form.");
+  const range = e.range;
+  syncLeadRows_(range.getSheet(), range.getRow(), range.getNumRows());
 }
 
 // Run once to import existing rows. Later edits sync automatically.
@@ -86,7 +96,12 @@ function syncLeadRows_(sheet, firstRow, rowCount) {
       headers.forEach((header, index) => {
         if (!LEAD_FIELDS.has(header)) return;
         const value = values[index];
-        if (header !== "full_name" && header !== "phone" && (value === "" || value === null || value === undefined)) return;
+        if (header !== "full_name" && header !== "phone" && (value === "" || value === null || value === undefined)) {
+          if (["email", "counselor_name", "preferred_destination", "budget", "next_follow_up_date"].includes(header)) {
+            lead[header] = "";
+          }
+          return;
+        }
         if (header === "whatsapp_opt_in") {
           lead[header] = typeof value === "boolean" ? value : ["true", "yes", "1"].includes(String(value).trim().toLowerCase());
         } else {
@@ -222,7 +237,8 @@ export function AutoLeadsWorkspace() {
 
   async function copy(value: string) {
     try {
-      await navigator.clipboard.writeText(value);
+      const clipboardValue = value.startsWith("curl -X POST ") ? curlExample : value;
+      await navigator.clipboard.writeText(clipboardValue);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
       toast.success("Copied to clipboard.");
@@ -232,6 +248,11 @@ export function AutoLeadsWorkspace() {
   }
 
   const script = googleAppsScript(endpoint);
+  const curlExample = `API_KEY="YOUR_SOURCE_API_KEY"
+curl -X POST "${endpoint}" \\
+  -H "Authorization: Bearer \${API_KEY}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"full_name":"Aarav Sharma","phone":"+919876543210","email":"aarav@example.com","source":"Website","priority":"Warm"}'`;
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 pb-10">
@@ -254,7 +275,7 @@ export function AutoLeadsWorkspace() {
               <p className="mt-3 text-3xl font-semibold tabular-nums">{loading ? "—" : activeCount}</p>
             </div>
             <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
-              <div className="flex items-center gap-2 text-xs text-slate-200"><Database className="h-4 w-4" /> Lead sync events</div>
+              <div className="flex items-center gap-2 text-xs text-slate-200"><Database className="h-4 w-4" /> Rows received</div>
               <p className="mt-3 text-3xl font-semibold tabular-nums">{loading ? "—" : sources.reduce((sum, source) => sum + Number(source.leads_received), 0).toLocaleString("en-IN")}</p>
             </div>
           </div>
@@ -328,7 +349,7 @@ export function AutoLeadsWorkspace() {
                         </Badge>
                       </div>
                       <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                        <span>{Number(source.leads_received).toLocaleString("en-IN")} sync events</span>
+                        <span>{Number(source.leads_received).toLocaleString("en-IN")} rows received</span>
                         <span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" />{source.last_received_at ? new Date(source.last_received_at).toLocaleString("en-IN") : "Never synced"}</span>
                       </p>
                     </div>
@@ -378,10 +399,11 @@ export function AutoLeadsWorkspace() {
                   <li>In row 1, use exact headers <code>full_name</code> and <code>phone</code>. Optional headers: <code>email</code>, <code>source</code>, <code>status</code>, <code>priority</code>, <code>whatsapp_opt_in</code>, <code>counselor_name</code>, <code>preferred_destination</code>, <code>budget</code>, <code>next_follow_up_date</code>. Use the allowed source/status/priority values shown below.</li>
                   <li>Open <strong>Extensions → Apps Script</strong>, replace the editor contents with the script below, and save.</li>
                   <li>In Apps Script, open <strong>Project Settings → Script Properties → Add script property</strong>. Set property <code>AUTO_LEADS_TOKEN</code> to the key you copied. Never put the key in a public sheet or browser code.</li>
-                  <li>Select <code>setupAutoLeadsTrigger</code> and click <strong>Run</strong> once. Review and approve Google’s authorization prompt. This installs the edit trigger.</li>
-                  <li>To import rows already in the sheet, select <code>syncAllExistingRows</code> and click <strong>Run</strong>. Later edits and multi-row pastes sync automatically.</li>
+                  <li>Select <code>setupAutoLeadsTrigger</code> and click <strong>Run</strong> once. Review and approve Google’s authorization prompt. This installs edit and linked-form submission triggers.</li>
+                  <li>To import rows already in the sheet, select <code>syncAllExistingRows</code> and click <strong>Run</strong>. Later edits, multi-row pastes, and linked Google Form submissions sync automatically.</li>
                 </ol>
                 <p><strong>Allowed values:</strong> source: Website, Google, Facebook, Instagram, Referral, Walk-in, Other. Status: New, Contacted, Interested, Documents, Applied, Offer letter, Admitted, Payment complete. Priority: Hot, Warm, Cold. Phone numbers should be plain text with country code. Rows are matched by phone; repeated syncs update instead of creating duplicates.</p>
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-amber-900"><strong>Sync direction:</strong> Google Sheets → CRM. Human edits and linked form submissions sync automatically; formula recalculations and changes made by other APIs do not fire Google edit triggers. Run <code>syncAllExistingRows</code> to reconcile those changes.</p>
                 <div className="flex justify-end">
                   <Button variant="outline" size="sm" onClick={() => void copy(script)}><Copy className="mr-1.5 h-3.5 w-3.5" />{copied ? "Copied" : "Copy Apps Script"}</Button>
                 </div>
@@ -418,17 +440,18 @@ export function AutoLeadsWorkspace() {
       </div>
 
       <Card className="rounded-2xl border-border/80 shadow-sm">
-        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <CardContent className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="flex items-start gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700"><Database className="h-4 w-4" /></span>
             <div>
               <p className="text-sm font-semibold">Direct API format</p>
-              <p className="mt-1 text-xs text-muted-foreground">Send one lead or a <code>{"{ leads: [...] }"}</code> batch of up to 100. Required fields are <code>full_name</code> and <code>phone</code>; use the bearer key for this source.</p>
+              <p className="mt-1 text-xs text-muted-foreground">Send one lead or a <code>{"{ leads: [...] }"}</code> batch of up to 100. Required fields are <code>full_name</code> and <code>phone</code>. Use the key for the source you created.</p>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={() => void copy(`curl -X POST "${endpoint}" \\\n  -H "Authorization: Bearer YOUR_AUTO_LEADS_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"full_name":"Aarav Sharma","phone":"+919876543210","email":"aarav@example.com","source":"Website","priority":"Warm"}'`)}>
             <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy cURL example
           </Button>
+          <pre className="overflow-x-auto rounded-xl bg-slate-950 p-4 text-[11px] leading-5 text-slate-100 lg:col-span-2"><code>{curlExample}</code></pre>
         </CardContent>
       </Card>
 

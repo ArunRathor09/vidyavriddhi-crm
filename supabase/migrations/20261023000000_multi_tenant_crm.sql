@@ -301,22 +301,22 @@ begin
     execute format('drop policy if exists %I on public.%I', 'Organization members manage ' || table_name, table_name);
     execute format('drop policy if exists %I on public.%I', 'Organization admins delete ' || table_name, table_name);
     execute format(
-      'create policy %I on public.%I for select to authenticated using (organization_id = any((select public.current_user_organizations())))',
+      'create policy %I on public.%I for select to authenticated using (organization_id = any(public.current_user_organizations()))',
       'Organization members read ' || table_name,
       table_name
     );
     execute format(
-      'create policy %I on public.%I for insert to authenticated with check (organization_id = any((select public.current_user_organizations())) and user_id = (select auth.uid()))',
+      'create policy %I on public.%I for insert to authenticated with check (organization_id = any(public.current_user_organizations()) and user_id = (select auth.uid()))',
       'Organization members create ' || table_name,
       table_name
     );
     execute format(
-      'create policy %I on public.%I for update to authenticated using (organization_id = any((select public.current_user_organizations()))) with check (organization_id = any((select public.current_user_organizations())))',
+      'create policy %I on public.%I for update to authenticated using (organization_id = any(public.current_user_organizations())) with check (organization_id = any(public.current_user_organizations()))',
       'Organization members update ' || table_name,
       table_name
     );
     execute format(
-      'create policy %I on public.%I for delete to authenticated using (organization_id = any((select public.current_user_organizations())) and public.user_is_org_admin(organization_id))',
+      'create policy %I on public.%I for delete to authenticated using (organization_id = any(public.current_user_organizations()) and public.user_is_org_admin(organization_id))',
       'Organization admins delete ' || table_name,
       table_name
     );
@@ -428,7 +428,7 @@ create trigger whatsapp_message_logs_protect_update
 drop policy if exists "Members can read WhatsApp message logs" on public.whatsapp_message_logs;
 create policy "Members can read WhatsApp message logs"
   on public.whatsapp_message_logs for select to authenticated
-  using (organization_id = any((select public.current_user_organizations())));
+  using (organization_id = any(public.current_user_organizations()));
 drop policy if exists "Members can create their WhatsApp message logs" on public.whatsapp_message_logs;
 drop policy if exists "Members can finalize their WhatsApp message logs" on public.whatsapp_message_logs;
 
@@ -439,7 +439,7 @@ alter table public.organization_invitations enable row level security;
 drop policy if exists "Members can read their organizations" on public.organizations;
 create policy "Members can read their organizations"
   on public.organizations for select to authenticated
-  using (id = any((select public.current_user_organizations())));
+  using (id = any(public.current_user_organizations()));
 
 drop policy if exists "Admins can update their organizations" on public.organizations;
 create policy "Admins can update their organizations"
@@ -452,7 +452,7 @@ create policy "Members can read organization memberships"
   on public.organization_members for select to authenticated
   using (
     user_id = (select auth.uid())
-    or (organization_id = any((select public.current_user_organizations())) and public.user_is_org_admin(organization_id))
+    or (organization_id = any(public.current_user_organizations()) and public.user_is_org_admin(organization_id))
   );
 
 drop policy if exists "Admins can add organization members" on public.organization_members;
@@ -565,12 +565,12 @@ drop policy if exists "Organization admins can delete documents" on storage.obje
 create policy "Organization members can read documents"
   on storage.objects for select to authenticated
   using (bucket_id = 'student-documents' and (
-    ((storage.foldername(name))[1])::uuid = any((select public.current_user_organizations()))
+    ((storage.foldername(name))[1])::uuid = any(public.current_user_organizations())
     or public.user_can_access_legacy_storage_folder(((storage.foldername(name))[1])::uuid)
   ));
 create policy "Organization members can upload documents"
   on storage.objects for insert to authenticated
-  with check (bucket_id = 'student-documents' and ((storage.foldername(name))[1])::uuid = any((select public.current_user_organizations())));
+  with check (bucket_id = 'student-documents' and ((storage.foldername(name))[1])::uuid = any(public.current_user_organizations()));
 create policy "Organization admins can update documents"
   on storage.objects for update to authenticated
   using (bucket_id = 'student-documents' and (
